@@ -1,0 +1,60 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+networks:
+  nt-local:
+    # driver: bridge
+    external: true
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    hostname: nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - nginx-conf-volume:/etc/nginx
+      - nginx-logs-volume:/var/log/nginx
+    networks:
+      - nt-local
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  nginx-prometheus-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-prometheus-exporter
+    hostname: nginx-prometheus-exporter
+    restart: unless-stopped
+    expose:
+      - 9113
+    command:
+      - '--nginx.scrape-uri=http://<nginx>:8080/stub_status'
+      # - '--nginx.plus --nginx.scrape-uri=http://<nginx-plus>:8080/api'
+    networks:
+      - nt-local
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+volumes:
+  nginx-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/nginx/conf
+  nginx-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/nginx/logs

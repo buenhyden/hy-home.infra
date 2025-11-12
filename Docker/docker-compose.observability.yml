@@ -1,0 +1,19 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-observability
+
+networks:
+  nt-observability:
+    name: nt-observability
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-qa:
+    external: true
+  nt-message-broker:
+    external: true
+  nt-databases:
+    external: true
+
+include:
+  - observability/docker-compose.observability.yml

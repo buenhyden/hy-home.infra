@@ -1,0 +1,25 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  argocd:
+    networks:
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+  # ######################################################################################
+volumes:
+  argocd-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+
+  # ######################################################################################

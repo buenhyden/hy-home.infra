@@ -1,0 +1,102 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  influxdb:
+    image: docker.io/bitnami/influxdb:latest
+    container_name: influxdb
+    restart: unless-stopped
+    hostname: influxdb
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - INFLUXDB_DB=${INFLUXDB_DB_NAME}
+      - INFLUXDB_ADMIN_USER=${ADMIN_USERNAME}
+      - INFLUXDB_ADMIN_USER_PASSWORD=${INFLUXDB_PASSWORD}
+      - INFLUXDB_ADMIN_USER_TOKEN=${INFLUXDB_API_TOKEN}
+      - INFLUXDB_ADMIN_ORG=${INFLUXDB_ADMIN_ORG}
+      - INFLUXDB_ADMIN_BUCKET=${INFLUXDB_ADMIN_BUCKET}
+      - INFLUXDB_USER=${DEFAULT_USERNAME}
+      - INFLUXDB_USER_PASSWORD=${INFLUXDB_PASSWORD}
+      - INFLUXDB_USER_BUCKET=${INFLUXDB_USER_BUCKET}
+    # ports:
+    #   - ${INFLUXDB_HOST_PORT}:${INFLUXDB_PORT}
+    expose:
+      - ${INFLUXDB_PORT}
+    volumes:
+      - influxdb-node1-volume:/bitnami/influxdb
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.influxdb.loadbalancer.server.port=${INFLUXDB_PORT}
+    #   - traefik.http.routers.influxdb.rule=Host(`influxdb.${DEFAULT_URL}`)
+    #   - traefik.http.routers.influxdb.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.influxdb-secure.rule=Host(`influxdb.${DEFAULT_URL}`)
+    #   - traefik.http.routers.influxdb-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.influxdb.middlewares=web-redirect-websecure
+  # ######################################################################################
+  # influxdb:
+  #   image: influxdb:latest
+  #   container_name: influxdb
+  #   restart: unless-stopped
+  #   hostname: influxdb
+  #   environment:
+  #     - INFLUXDB_DB=${INFLUXDB_DB_NAME}
+  #     - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+  #     - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+  #     - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+  #     - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+  #     - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_API_TOKEN}
+  #   ports:
+  #     - ${INFLUXDB_HOST_PORT}:${INFLUXDB_PORT}
+  #   expose:
+  #     - ${INFLUXDB_PORT}
+  #   volumes:
+  #     - influxdb-conf-volume:/etc/influxdb2:rw
+  #     - influxdb-data-volume:/var/lib/influxdb2:rw
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.docker.network=nt-local
+  #     - traefik.http.services.influxdb.loadbalancer.server.port=${INFLUXDB_PORT}
+  #     - traefik.http.routers.influxdb.rule=Host(`influxdb.${DEFAULT_URL}`)
+  #     - traefik.http.routers.influxdb.entrypoints=web
+  #     # For https:
+  #     - traefik.http.routers.influxdb-secure.rule=Host(`influxdb.${DEFAULT_URL}`)
+  #     - traefik.http.routers.influxdb-secure.entrypoints=websecure
+  #     - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+  #     - traefik.http.routers.influxdb.middlewares=web-redirect-websecure
+
+volumes:
+  influxdb-node1-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/influxdb/node1
+  # ######################################################################################
+  # influxdb-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/influxdb/node1/config
+  # influxdb-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/influxdb/node1/data

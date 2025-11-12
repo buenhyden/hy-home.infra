@@ -1,0 +1,30 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-db
+
+networks:
+  nt-databases:
+    name: nt-databases
+    driver: bridge
+  nt-message-broker:
+    name: nt-message-broker
+    driver: bridge
+  nt-observability:
+    name: nt-observability
+    driver: bridge
+  nt-webserver:
+    external: true
+
+include:
+  - databases/docker-compose.mysql.yml
+  - databases/docker-compose.mongodb.yml
+  - databases/docker-compose.redis.yml
+  - databases/docker-compose.postgres.yml
+  - databases/docker-compose.ksql.yml
+  - databases/docker-compose.valkey.yml
+  - databases/docker-compose.influxdb.yml
+  # - databases/docker-compose.cassandra.yml
+  - databases/docker-compose.couchdb.yml
+  # - databases/docker-compose.mariadb.yml
+  # - databases/docker-compose.memcached.yml
+  - databases/docker-compose.neo4j.yml

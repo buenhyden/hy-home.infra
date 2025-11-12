@@ -1,0 +1,63 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  # k6-tracing:
+  #   image: ghcr.io/grafana/xk6-client-tracing:latest
+  #   environment:
+  #     - ENDPOINT=tempo:4317
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - tempo
+  #   networks:
+  #     - nt-local
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    hostname: tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - tempo-conf-volume:/etc/tempo
+      - tempo-data-volume:/tmp/tempo
+    expose:
+      - 3200
+      - 14268
+      - 9095
+      - 4317
+      - 4318
+      - 9411
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    networks:
+      - nt-webserver
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  tempo-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TRACE_DIR}/tempo/conf
+  tempo-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TRACE_DIR}/tempo/data
+  tempo-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TRACE_DIR}/tempo/logs
+  # ######################################################################################

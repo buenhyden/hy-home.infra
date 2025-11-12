@@ -1,0 +1,261 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: mongodb-exporter
+    hostname: mongodb-exporter
+    restart: unless-stopped
+    expose:
+      - ${MONGO_EXPORTER_PORT}
+    command:
+      - "--mongodb.uri=mongodb://root:${NOSQL_ROOT_PASSWORD}@${MONGODB_PRIMARY_HOSTNAME}:${MONGODB_PORT}"
+    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+    depends_on:
+      - mongodb-primary
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    networks:
+      - nt-databases
+      - nt-observability
+    logging: *logging
+
+  mongodb-primary:
+    image: docker.io/bitnami/mongodb:latest
+    # restart: unless-stopped
+    restart: unless-stopped
+    container_name: mongodb-primary
+    hostname: mongodb-primary
+    expose:
+      - ${MONGODB_PORT}
+    ports:
+      - ${MONGODB_HOST_PRIMARY_PORT}:${MONGODB_PORT}
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      # - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=${NOSQL_ROOT_PASSWORD}
+      - MONGODB_USERNAME=${DEFAULT_USERNAME}
+      - MONGODB_PASSWORD=${MONGODB_USER_PASSWORD}
+      # - MONGODB_REPLICA_SET_KEY=hydenLocalReplicaSet
+      - MONGODB_METRICS_USERNAME=${MONGODB_METRICS_USERNAME}
+      - MONGODB_METRICS_PASSWORD=${MONGODB_USER_PASSWORD}
+    volumes:
+      - "mongodb-primary-volume:/bitnami/mongodb"
+
+  # mongodb-secondary:
+  #   image: docker.io/bitnami/mongodb:latest
+  #   restart: unless-stopped
+  #   container_name: mongodb-secondary
+  #   hostname: mongodb-secondary
+  #   expose:
+  #     - ${MONGODB_PORT}
+  #   ports:
+  #     - ${MONGODB_HOST_SECONDARY_PORT}:${MONGODB_PORT}
+  #   depends_on:
+  #     - mongodb-primary
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - MONGODB_ADVERTISED_HOSTNAME=mongodb-secondary
+  #     - MONGODB_REPLICA_SET_MODE=secondary
+  #     - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+  #     - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+  #     - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=${NOSQL_ROOT_PASSWORD}
+  #     - MONGODB_REPLICA_SET_KEY=hydenLocalReplicaSet
+  #   volumes:
+  #     - "mongodb-secondary-volume:/bitnami/mongodb"
+
+  # mongodb-arbiter:
+  #   image: docker.io/bitnami/mongodb:latest
+  #   restart: unless-stopped
+  #   container_name: mongodb-arbiter
+  #   hostname: mongodb-arbiter
+  #   expose:
+  #     - ${MONGODB_PORT}
+  #   ports:
+  #     - ${MONGODB_HOST_ARBITER_PORT}:${MONGODB_PORT}
+  #   depends_on:
+  #     - mongodb-primary
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+  #     - MONGODB_REPLICA_SET_MODE=arbiter
+  #     - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+  #     - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+  #     - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=${NOSQL_ROOT_PASSWORD}
+  #     - MONGODB_REPLICA_SET_KEY=hydenLocalReplicaSet
+  #   volumes:
+  #     - "mongodb-arbiter-volume:/bitnami/mongodb"
+  # ######################################################################################
+  # mongodb-rep1:
+  #   image: mongo:latest
+  #   restart: unless-stopped
+  #   container_name: mongodb-rep1
+  #   hostname: mongodb-rep1
+  #   expose:
+  #     - ${MONGODB_PORT}
+  #   ports:
+  #     - ${MONGODB_HOST_REPLICASET_1_PORT}:${MONGODB_PORT}
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: ${NOSQL_ROOT_USER}
+  #     MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_ROOT_PASSWORD}
+  #   # 볼륨 설정
+  #   volumes:
+  #     - replicaset-1-mongo-conf-volume:/data/configdb
+  #     - replicaset-1-mongo-data-volume:/data/db:rw
+  #   command:
+  #     - "--replSet"
+  #     - "MyReplicaSet"
+  #     - "--keyFile"
+  #     - "/data/configdb/mongodb.key"
+  #     - "--bind_ip_all"
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  # mongodb-rep2:
+  #   image: mongo:latest
+  #   restart: unless-stopped
+  #   container_name: mongodb-rep2
+  #   hostname: mongodb-rep2
+  #   expose:
+  #     - ${MONGODB_PORT}
+  #   ports:
+  #     - ${MONGODB_HOST_REPLICASET_2_PORT}:${MONGODB_PORT}
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: ${NOSQL_ROOT_USER}
+  #     MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_ROOT_PASSWORD}
+  #   # 볼륨 설정
+  #   volumes:
+  #     - replicaset-2-mongo-conf-volume:/data/configdb
+  #     - replicaset-2-mongo-data-volume:/data/db:rw
+  #   command:
+  #     - "--replSet"
+  #     - "MyReplicaSet"
+  #     - "--keyFile"
+  #     - "/data/configdb/mongodb.key"
+  #     - "--bind_ip_all"
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  # mongo-express:
+  #   image: mongo-express:latest
+  #   container_name: mongo-express
+  #   hostname: mongo-express
+  #   restart: unless-stopped
+  #   environment:
+  #     ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+  #     ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: ${NOSQL_ROOT_USER}
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: ${NOSQL_ROOT_PASSWORD}
+  #     ME_CONFIG_MONGODB_URL: mongodb://${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep1:${MONGODB_PORT}?replicaSet=MyReplicaSet,${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep2:${MONGODB_PORT}?replicaSet=MyReplicaSet
+  #     ME_CONFIG_MONGODB_SERVER: mongodb-rep1,mongodb-rep2
+  #     ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_CONFIG_BASICAUTH_USERNAME}
+  #     ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_CONFIG_BASICAUTH_PASSWORD}
+  #   expose:
+  #     - ${MONGO_EXPRESS_PORT}
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.docker.network=nt-local
+  #     - traefik.http.services.mongo-express.loadbalancer.server.port=${MONGO_EXPRESS_PORT}
+  #     - traefik.http.routers.mongo-express.rule=Host(`mongo-express.${DEFAULT_URL}`)
+  #     - traefik.http.routers.mongo-express.entrypoints=web
+  #     # For https:
+  #     - traefik.http.routers.mongo-express-secure.rule=Host(`mongo-express.${DEFAULT_URL}`)
+  #     - traefik.http.routers.mongo-express-secure.entrypoints=websecure
+  #     - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+  #     - traefik.http.routers.mongo-express.middlewares=web-redirect-websecure
+  #   networks:
+  #     - nt-databases
+  #   depends_on:
+  #     - mongodb-rep1
+  #     - mongodb-rep2
+  #   logging: *logging
+
+  # mongodb-exporter:
+  #   image: percona/mongodb_exporter:0.40.0
+  #   container_name: mongodb-exporter
+  #   expose:
+  #     - ${MONGO_EXPORTER_PORT}
+  #   command:
+  #     - "--mongodb.uri=mongodb://${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep1:${MONGODB_PORT}?replicaSet=MyReplicaSet,${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep2:${MONGODB_PORT}?replicaSet=MyReplicaSet"
+  #   # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+  #   depends_on:
+  #     - mongodb-rep1
+  #     - mongodb-rep2
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+volumes:
+  mongodb-primary-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/mongo/primary
+  # mongodb-secondary-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/secondary
+  # mongodb-arbiter-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/arbiter
+  # ######################################################################################
+  # replicaset-1-mongo-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-1/configdb
+  # replicaset-1-mongo-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-1/db
+  # replicaset-2-mongo-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-2/configdb
+  # replicaset-2-mongo-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-2/db

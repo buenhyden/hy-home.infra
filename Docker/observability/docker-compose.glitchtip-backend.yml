@@ -1,0 +1,51 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+x-environment: &default-environment
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}:5432/postgres
+  SECRET_KEY: change_me
+  ENABLE_ORGANIZATION_CREATION: "true"
+  ENABLE_TEST_API: "true"
+  DEBUG: "true"
+  EMAIL_BACKEND: "django.core.mail.backends.console.EmailBackend"
+  ENABLE_OBSERVABILITY_API: "true"
+  GLITCHTIP_ENABLE_NEW_ISSUES: "true"
+  #IS_LOAD_TEST: "true"
+  CELERY_WORKER_CONCURRENCY: 4
+  CELERY_WORKER_PREFETCH_MULTIPLIER: 25
+  CELERY_WORKER_POOL: "threads"
+  CELERY_SKIP_CHECKS: "true"
+  PYTHONBREAKPOINT: "ipdb.set_trace"
+  TZ: ${DEFAULT_TIMEZONE}
+
+x-volumes: &default-volumes
+  - .:/code
+
+services:
+  web:
+    build: ./glitchtip-backend
+    user: root # Allows for usage of ipdb, apt, etc in dev
+    command: ./manage.py runserver 0.0.0.0:8000
+    #command: python -m gunicorn glitchtip.asgi:application -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0
+    volumes: *default-volumes
+    networks:
+      - nt-webserver
+    ports:
+      - "8000:8000"
+    environment: *default-environment
+  worker:
+    build: ./glitchtip-backend
+    user: root
+    command: bin/run-celery-with-beat.sh
+    volumes: *default-volumes
+    networks:
+      - nt-webserver
+    environment: *default-environment
+  # ######################################################################################
+

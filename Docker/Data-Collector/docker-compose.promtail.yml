@@ -1,0 +1,47 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+services:
+  promtail:
+    container_name: promtail
+    hostname: promtail
+    restart: unless-stopped
+    image: grafana/promtail:latest
+    volumes:
+      - promtail-conf-volume:/etc/promtail
+      - promtail-logs-volume:/var/log/promtail
+      - promtail-position-volume:/tmp/promtail
+    command: -config.file=/etc/promtail/promtail.yaml
+    networks:
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  promtail-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/promtail/conf
+  promtail-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/promtail/logs
+  promtail-position-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/promtail/position
+  # ######################################################################################

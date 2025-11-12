@@ -1,0 +1,164 @@
+# Copyright Broadcom, Inc. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+version: "2"
+
+services:
+  harbor-registry:
+    image: docker.io/bitnami/harbor-registry:2
+    container_name: harbor-registry
+    hostname: harbor-registry
+    environment:
+      - REGISTRY_HTTP_SECRET=${HARBOR_REGISTRY_HTTP_SECRET}
+    expose:
+      - ${HARBOR_PORT}
+    networks:
+      - nt-devops
+      - nt-databases
+    volumes:
+      - harbor-registry-data-volume:/storage
+      - harbor-registry-conf-volume:/etc/registry:rw
+      # - ./config/registry/:/etc/registry/:ro
+  harbor-registryctl:
+    image: docker.io/bitnami/harbor-registryctl:2
+    container_name: harbor-registryctl
+    hostname: harbor-registryctl
+    environment:
+      - CORE_SECRET=${HARBOR_CORE_SECRET}
+      - JOBSERVICE_SECRET=${HARBOR_JOBSERVICE_SECRET}
+      - REGISTRY_HTTP_SECRET=${HARBOR_REGISTRY_HTTP_SECRET}
+    expose:
+      - ${HARBOR_PORT}
+    networks:
+      - nt-devops
+      - nt-databases
+    volumes:
+      - harbor-registry-data-volume:/storage
+      - harbor-registry-conf-volume:/etc/registry:rw
+      - harbor-registryctl-conf-volume:/etc/registryctl:rw
+      # - ./config/registry/:/etc/registry/:ro
+      # - ./config/registryctl/config.yml:/etc/registryctl/config.yml:ro
+  harbor-core:
+    image: docker.io/bitnami/harbor-core:2
+    container_name: harbor-core
+    hostname: harbor-core
+    depends_on:
+      - harbor-registry
+    expose:
+      - ${HARBOR_PORT}
+    networks:
+      - nt-devops
+      - nt-databases
+    environment:
+      - CORE_KEY=${HARBOR_CORE_KEY}
+      - _REDIS_URL_CORE=redis://:${VALKEY_PASSWORD}@${VALKEY_STANDALONE_HOSTNAME}:${VALKEY_PORT}/0
+      - SYNC_REGISTRY=false
+      - CHART_CACHE_DRIVER=redis
+      - _REDIS_URL_REG=redis://:${VALKEY_PASSWORD}@${VALKEY_STANDALONE_HOSTNAME}:${VALKEY_PORT}/1
+      - PORT=${HARBOR_PORT}
+      - LOG_LEVEL=info
+      - EXT_ENDPOINT=https://harbor.${DEFAULT_URL}
+      - DATABASE_TYPE=postgresql
+      - REGISTRY_CONTROLLER_URL=http://harbor-registryctl:8080
+      - POSTGRESQL_HOST=${POSTGRES_HOSTNAME}
+      - POSTGRESQL_PORT=${POSTGRES_PORT}
+      - POSTGRESQL_DATABASE=${HARBOR_POSTGRE_DBNAME}
+      - POSTGRESQL_USERNAME=${DEFAULT_USERNAME}
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_SSLMODE=disable
+      - REGISTRY_URL=http://harbor-registry:5000
+      - TOKEN_SERVICE_URL=http://harbor-core:8080/service/token
+      - HARBOR_ADMIN_PASSWORD=${HARBOR_PASSWORD}
+      - CORE_SECRET=${HARBOR_CORE_SECRET}
+      - JOBSERVICE_SECRET=${HARBOR_JOBSERVICE_SECRET}
+      - ADMIRAL_URL=
+      - CORE_URL=http://harbor-core:8080
+      - JOBSERVICE_URL=http://harbor-jobservice:8080
+      - REGISTRY_STORAGE_PROVIDER_NAME=filesystem
+      - REGISTRY_CREDENTIAL_USERNAME=${DEFAULT_USERNAME}
+      - REGISTRY_CREDENTIAL_PASSWORD=${HARBOR_PASSWORD}
+      - READ_ONLY=false
+      - RELOAD_KEY=
+    volumes:
+      - harbor-core-data-volume:/data
+      - harbor-core-conf-volume:/etc/core/:rw
+      # - ./config/core/app.conf:/etc/core/app.conf:ro
+      # - ./config/core/private_key.pem:/etc/core/private_key.pem:ro
+  harbor-portal:
+    image: docker.io/bitnami/harbor-portal:2
+    container_name: harbor-portal
+    hostname: harbor-portal
+    expose:
+      - ${HARBOR_PORT}
+    networks:
+      - nt-devops
+      - nt-webserver
+      - nt-databases
+    depends_on:
+      - harbor-core
+  harbor-jobservice:
+    image: docker.io/bitnami/harbor-jobservice:2
+    container_name: harbor-jobservice
+    hostname: harbor-jobservice
+    expose:
+      - ${HARBOR_PORT}
+    depends_on:
+      - harbor-core
+    networks:
+      - nt-devops
+      - nt-databases
+    environment:
+      - CORE_SECRET=${HARBOR_CORE_SECRET}
+      - JOBSERVICE_SECRET=${HARBOR_JOBSERVICE_SECRET}
+      - CORE_URL=http://harbor-core:${HARBOR_PORT}
+      - REGISTRY_CONTROLLER_URL=http://harbor-registryctl:${HARBOR_PORT}
+      - REGISTRY_CREDENTIAL_USERNAME=${DEFAULT_USERNAME}
+      - REGISTRY_CREDENTIAL_PASSWORD=${HARBOR_PASSWORD}
+    volumes:
+      - harbor-jobservice-logs-volume:/var/log/jobs
+      - harbor-jobservice-conf-volume:/etc/jobservice:rw
+      # - ./config/jobservice/config.yml:/etc/jobservice/config.yml:ro
+volumes:
+  harbor-registry-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/registry/data
+  harbor-registry-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/registry/conf
+  harbor-registryctl-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/registryctl/conf
+  harbor-core-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/core/data
+  harbor-core-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/core/conf
+  harbor-jobservice-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/jobservice/logs
+  harbor-jobservice-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/harbor/jobservice/conf
+

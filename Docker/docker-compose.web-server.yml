@@ -1,0 +1,47 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-webserver
+
+networks:
+  nt-webserver:
+    name: nt-webserver
+    driver: bridge
+  # nt-workflow:
+  #   external: true
+  # nt-wiki:
+  #   external: true
+  # nt-sync:
+  #   external: true
+  # nt-supabase:
+  #   external: true
+  # nt-incident:
+  #   external: true
+  # nt-storage:
+  #   external: true
+  # nt-searchengine:
+  #   external: true
+  # nt-qa:
+  #   external: true
+  # nt-etc:
+  #   external: true
+  # nt-devops:
+  #   external: true
+  # nt-design-system:
+  #   external: true
+  # nt-auth:
+  #   external: true
+  # nt-databases:
+  #   external: true
+  # nt-message-broker:
+  #   external: true
+  # nt-observability:
+  #   external: true
+  # nt-private:
+  #   external: true
+  # nt-data-collector:
+  #   external: true
+
+include:
+  - Web-server/docker-compose.caddy.yml
+  # Web-server/docker-compose.nginx.yml
+  # Web-server/docker-compose.nginx-proxy-manager.yml

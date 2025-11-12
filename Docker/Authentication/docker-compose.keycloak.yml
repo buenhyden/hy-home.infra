@@ -1,0 +1,71 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  keycloak:
+    # image: docker.io/bitnami/keycloak:latest
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    hostname: keycloak
+    restart: unless-stopped
+    command: start
+    expose:
+      - ${KEYCLOAK_PORT}
+    # ports:
+    #   - ${KEYCLOAK_HOST_PORT}:${KEYCLOAK_PORT}
+    healthcheck:
+      test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/8080' || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    volumes:
+      - keycloak-import-volume:/opt/keycloak/data/import
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # - KC_HOSTNAME=localhost
+      - KC_HOSTNAME=keycloak.${DEFAULT_URL}
+      # - KC_HOSTNAME_PORT=${KEYCLOAK_HOST_PORT}
+      - KC_HOSTNAME_STRICT_BACKCHANNEL=false
+      - KC_HTTP_ENABLED=true
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KEYCLOAK_FRONTEND_URL=https://keycloak.${DEFAULT_URL}
+      - KC_DB=${KEYCLOAK_DATABASE}
+      - KC_DB_URL=jdbc:postgresql://${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${KEYCLOAK_POSTGRES_DBNAME}
+      - KC_DB_PASSWORD=${POSTGRES_PASSWORD}
+      - KC_DB_USERNAME=${DEFAULT_USERNAME}
+      - KC_PROXY=edge
+      - KC_PROXY_ADDRESS_FORWARDING=true
+      - KC_HTTP_ENABLED=true
+      - KEYCLOAK_USER=${DEFAULT_USERNAME}
+      - KEYCLOAK_PASSWORD=${KEYCLOAK_USER_PASSWORD}
+      - KEYCLOAK_ADMIN=${ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_LOG_LEVEL=INFO
+      - LOG=file
+      - LOG_LEVEL=INFO
+      - LOG_FILE_FORMAT=json
+      # KC_HTTPS_CERTIFICATE_FILE: /etc/x509/https/hy-local.home.com+1.pem
+      # KC_HTTPS_CERTIFICATE_KEY_FILE: /etc/x509/https/hy-local.home.com+1-key.pem
+    networks:
+      - nt-webserver
+      - nt-auth
+      - nt-databases
+      - nt-observability
+    logging: *logging
+
+volumes:
+  keycloak-import-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AUTHENTICATION_DIR}/keycloak/import

@@ -1,0 +1,55 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+networks:
+  nt-local:
+    external: true
+
+services:
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    hostname: mailhog
+    restart: unless-stopped
+    expose:
+      - 8025
+      - 1025
+    ports:
+      - ${DEV_MAIL_PORT:-8025}:8025
+    networks:
+      - nt-default
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # - 'MH_MONGO_COLLECTION=test'
+      # - 'MH_MONGO_DB=mailhog'
+      # - 'MH_MONGO_URI=root:7agUa4oShiYuXqY@localhost:27017'
+      # - 'MH_STORAGE=mongodb'
+      - 'MH_OUTGOING_SMTP=/mailhog/smtp.json'
+    volumes:
+      - mailhog-conf-volume:/mailhog
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.mailhog.loadbalancer.server.port=8025
+    #   - traefik.http.routers.mailhog.rule=Host(`mailhog.${DEFAULT_URL}`)
+    #   - traefik.http.routers.mailhog.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.mailhog-secure.rule=Host(`mailhog.${DEFAULT_URL}`)
+    #   - traefik.http.routers.mailhog-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.mailhog.middlewares=web-redirect-websecure
+    logging: *logging
+
+volumes:
+  mailhog-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRASTRUCTURE_DIR}/mailhog/conf

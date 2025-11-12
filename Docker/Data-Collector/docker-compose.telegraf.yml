@@ -1,0 +1,34 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    hostname: telegraf
+    restart: unless-stopped
+    volumes:
+      - telegraf-conf-volume:/etc/telegraf:ro
+    expose:
+      - 8125/udp
+    networks:
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  telegraf-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/telegraf/conf
+  # ######################################################################################

@@ -1,0 +1,16 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-wiki
+
+networks:
+  nt-wiki:
+    name: nt-wiki
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-databases:
+    external: true
+
+include:
+  - Wiki/docker-compose.wiki.js.yml
+  - Wiki/docker-compose.bookstack.yml

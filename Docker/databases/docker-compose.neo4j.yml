@@ -1,0 +1,208 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  neo4j:
+    image: docker.io/bitnami/neo4j:latest
+    container_name: neo4j
+    hostname: neo4j
+    restart: unless-stopped
+    expose:
+      - ${NEO4J_BOLT_PORT}
+      - ${NEO4J_HTTP_PORT}
+      - ${NEO4J_HTTPS_PORT}
+    ports:
+      - "${NEO4J_HOST_BOLT_PORT}:${NEO4J_BOLT_PORT}"
+      # - "${NEO4J_HOST_HTTP_PORT}:${NEO4J_HTTP_PORT}"
+      # - "${NEO4J_HOST_HTTPS_PORT}:${NEO4J_HTTPS_PORT}"
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+    volumes:
+      - "neo4j-volume:/bitnami/neo4j"
+    networks:
+      - nt-databases
+      - nt-webserver
+    # The ports that will be accessible from outside the container - HTTP (7474) and Bolt (7687).
+    logging: *logging
+  # ######################################################################################
+  # neo4j:
+  #   # Docker image to be used
+  #   image: neo4j:latest
+  #   container_name: neo4j
+  #   # Hostname
+  #   hostname: neo4j
+  #   restart: unless-stopped
+  #   # Service-level network, which specifies the networks, from the list of the top-level networks (in this case only neo4j-internal), that the server will connect to.
+  #   # Adds a network alias (used in neo4j.conf when configuring the discovery members)
+  #   networks:
+  #     - nt-databases
+  #   # The ports that will be accessible from outside the container - HTTP (7474) and Bolt (7687).
+  #   logging: *logging
+  #   expose:
+  #     - 7687
+  #     - 7474
+  #     - 7473
+  #     - 6362
+  #     - 7688
+  #     - 5001
+  #     - 2004
+  #   ports:
+  #     - 7687:7687
+  #     - 7474:7474
+  #     - 7473:7473
+  #     - 6362:6362
+  #     - 7688:7688
+  #     - 5001:5001
+  #     - 2004:2004
+  #   # Uncomment the volumes to be mounted to make them accessible from outside the container.
+  #   volumes:
+  #     - neo4j-data-volume:/data
+  #     - neo4j-logs-volume:/logs
+  #     - neo4j-conf-volume:/conf
+  #     - neo4j-import-volume:/import
+  #     - neo4j-metrics-volume:/metrics
+  #     - neo4j-plugins-volume:/plugins
+  #     #- ./licenses/server1:/licenses
+  #     #- ./ssl/server1:/ssl
+  #   # labels:
+  #   #   - traefik.enable=true
+  #   #   - traefik.docker.network=nt-local
+  #   #   # Neo4j browser service
+  #   #   - 'traefik.http.routers.neo4j.rule=Host(`neo4j.${DEFAULT_URL}`)'
+  #   #   - 'traefik.http.routers.neo4j.tls=true'
+  #   #   - 'traefik.http.routers.neo4j.service=neo4j'
+  #   #   - 'traefik.http.routers.neo4j.entrypoints=websecure'
+  #   #   - 'traefik.http.services.neo4j.loadbalancer.server.port=7474'
+
+  #   #   # Neo4j bolt service for browser websocket
+  #   #   - 'traefik.http.routers.neo4j-bolt.entrypoints=websecure'
+  #   #   - 'traefik.http.routers.neo4j-bolt.tls=true'
+  #   #   - 'traefik.http.routers.neo4j-bolt.rule=Host(`neo4j-bolt.${DEFAULT_URL}`)'
+  #   #   - 'traefik.http.routers.neo4j-bolt.service=neo4j-bolt'
+  #   #   - 'traefik.http.services.neo4j-bolt.loadbalancer.server.port=7687'
+  #   #   - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+  #   #   - 'traefik.http.routers.neo4j-bolt.middlewares=sslheader'
+
+  #   #   # Bolt service for drivers
+  #   #   - 'traefik.tcp.routers.neo4j-bolt.rule=HostSNI(`neo4j-bolt.${DEFAULT_URL}`)'
+  #   #   - 'traefik.tcp.routers.neo4j-bolt.service=neo4j-bolt'
+  #   #   - 'traefik.tcp.routers.neo4j-bolt.entrypoints=websecure'
+  #   #   - 'traefik.tcp.routers.neo4j-bolt.tls.passthrough=true'
+  #   #   - 'traefik.tcp.services.neo4j-bolt.loadbalancer.server.port=7687'
+  #     # neo4j
+  #     # - traefik.http.services.neo4j.loadbalancer.server.port=7474
+  #     # - traefik.http.routers.neo4j.rule=Host(`neo4j.${DEFAULT_URL}`)
+  #     # - traefik.http.routers.neo4j.entrypoints=web
+  #     # - traefik.http.routers.neo4j.service=neo4j
+  #     # # For https:
+  #     # - traefik.http.routers.neo4j-secure.rule=Host(`neo4j.${DEFAULT_URL}`)
+  #     # - traefik.http.routers.neo4j-secure.entrypoints=websecure
+  #     # - traefik.http.routers.neo4j-secure.service=neo4j
+  #     # - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+  #     # - traefik.http.routers.neo4j-secure.middlewares=web-redirect-websecure
+
+  #     # # neo4j bolt
+  #     # - traefik.http.services.neo4j-bolt.loadbalancer.server.port=7687
+  #     # - traefik.http.routers.neo4j-bolt.rule=Host(`neo4j-bolt.${DEFAULT_URL}`)
+  #     # - traefik.http.routers.neo4j-bolt.entrypoints=web
+  #     # - traefik.http.routers.neo4j-bolt.service=neo4j-bolt
+  #     # # For https:
+  #     # - traefik.http.routers.neo4j-bolt-secure.rule=Host(`neo4j-bolt.${DEFAULT_URL}`)
+  #     # - traefik.http.routers.neo4j-bolt-secure.entrypoints=websecure
+  #     # - traefik.http.routers.neo4j-bolt-secure.service=neo4j
+  #     # - traefik.http.routers.neo4j-bolt-secure.middlewares=web-redirect-websecure
+
+  #   # Passes the following environment variables to the container
+  #   environment:
+  #     - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+  #     - NEO4J_apoc_export_file_enabled=true
+  #     - NEO4J_apoc_import_file_enabled=true
+  #     - NEO4J_apoc_import_file_use__neo4j__config=true
+
+  #     - NEO4J_PLUGINS='["bloom"]'
+  #     # - NEO4J_server_cluster_system__database__mode=PRIMARY
+  #     # - NEO4J_initial_server_mode__constraint=PRIMARY
+  #     # - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+  #     - NEO4J_server_default__advertised__address=neo4j
+  #     - NEO4J_server_http_listen__address=:7474
+  #     - NEO4J_server_http_advertised__address=:7474
+  #     - NEO4J_server_https_enabled=false
+  #     - NEO4J_server_https_listen__address=:7473
+  #     - NEO4J_server_https_advertised__address=:7473
+  #     - NEO4J_server_bolt_listen__address=:7687
+  #     - NEO4J_server_bolt_advertised__address=:7687
+  #     # - NEO4J_dbms_security_procedures_unrestricted=gds.*,apoc.*,bloom.*,com.neo4jh3.*,com.foursquare.*,com.neo4j.*,com.nyctaxi.*,com.snap.*,com.mediamath.*,com.freki.*
+  #     # - NEO4J_dbms_security_procedures_allowlist=gds.*,apoc.*,bloom.*,com.neo4jh3.*,com.foursquare.*,com.neo4j.*,com.nyctaxi.*,com.snap.*,com.mediamath.*,com.freki.*
+  #     - NEO4J_internal_metrics_cypher_cache_entries_enabled=true
+  #     - NEO4J_server_metrics_enabled=true
+  #     - NEO4J_server_metrics_filter=*
+  #     - NEO4J_server_metrics_csv_enabled=false
+  #     - NEO4J_server_memory_heap_initial__size=12g
+  #     - NEO4J_server_memory_heap_max__size=12g
+  #     - NEO4J_server_memory_pagecache_size=2g
+  #     # - NEO4J_gds_enterprise_license__file=/var/lib/neo4j/licenses/gds.lic
+  #     # - NEO4J_dbms_bloom_license__file=/var/lib/neo4j/licenses/bloom.lic
+  #     - NEO4J_server_config_strict__validation_enabled=false
+  #     - NEO4J_server_metrics_prometheus_enabled=true
+  #     - NEO4J_server_metrics_prometheus_endpoint=localhost:2004
+  #     - NEO4J_internal_dbms_relationship__uniqueness__constraints=true
+  #     - NEO4J_dbms_routing_enabled=false
+  #     - NEO4J_server_unmanaged__extension__classes=com.neo4j.bloom.server=/bloom
+  #     - NEO4J_dbms_security_http__auth__allowlist=/,/browser.*,/bloom.*
+  #   # Simple check testing whether the port 7474 is opened.
+  #   # If so, the instance running inside the container is considered as "healthy".
+  #   # This status can be checked using the "docker ps" command.
+  #   healthcheck:
+  #     test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider localhost:7474 || exit 1']
+
+volumes:
+  neo4j-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/neo4j/node1
+  # ######################################################################################
+  # neo4j-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/conf
+  # neo4j-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/data
+  # neo4j-logs-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/logs
+  # neo4j-import-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/import
+  # neo4j-plugins-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/plugins
+  # neo4j-metrics-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/neo4j/node1/metrics

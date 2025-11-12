@@ -1,0 +1,199 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  windmill_server:
+    image: ${WINDMILL_IMAGE}
+    pull_policy: "always"
+    deploy:
+      replicas: 1
+    restart: unless-stopped
+    expose:
+      - ${WINDMILL_PORT}
+    ports:
+      - ${WINDMILL_HOST_PORT}:${WINDMILL_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - DATABASE_URL=${WINDMILL_DATABASE_URL}
+      - MODE=server
+    volumes:
+      - windmill_server-worker_logs-volume:/tmp/windmill/logs
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.windmill.loadbalancer.server.port=8000
+    #   - traefik.http.routers.windmill.rule=Host(`windmill.${DEFAULT_URL}`)
+    #   - traefik.http.routers.windmill.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.windmill-secure.rule=Host(`windmill.${DEFAULT_URL}`)
+    #   - traefik.http.routers.windmill-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.windmill.middlewares=web-redirect-websecure
+    networks:
+      - nt-workflow
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+
+  windmill_worker:
+    image: ${WINDMILL_IMAGE}
+    pull_policy: "always"
+    deploy:
+      # replicas: 3
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2048M
+    restart: unless-stopped
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - DATABASE_URL=${WINDMILL_DATABASE_URL}
+      - MODE=worker
+      - WORKER_GROUP=default
+    networks:
+      - nt-workflow
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+    # to mount the worker folder to debug, KEEP_JOB_DIR=true and mount /tmp/windmill
+    volumes:
+      # mount the docker socket to allow to run docker containers from within the workers
+      - /var/run/docker.sock:/var/run/docker.sock
+      - windmill_worker-worker_dependency_cache-volume:/tmp/windmill/cache
+      - windmill_worker-worker_logs-volume:/tmp/windmill/logs
+
+  ## This worker is specialized for "native" jobs. Native jobs run in-process and thus are much more lightweight than other jobs
+  windmill_worker_native:
+    # Use ghcr.io/windmill-labs/windmill-ee:main for the ee
+    image: ${WINDMILL_IMAGE}
+    pull_policy: "always"
+    deploy:
+      # replicas: 2
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
+    restart: unless-stopped
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - DATABASE_URL=${WINDMILL_DATABASE_URL}
+      - MODE=worker
+      - WORKER_GROUP=native
+    volumes:
+      # mount the docker socket to allow to run docker containers from within the workers
+      - windmill_worker_native-worker_logs-volume:/tmp/windmill/logs
+    networks:
+      - nt-workflow
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+
+  ## This worker is specialized for reports or scraping jobs. It is assigned the "reports" worker group which has an init script that installs chromium and can be targeted by using the "chromium" worker tag.
+  # windmill_worker_reports:
+  #   image: ${WINDMILL_IMAGE}
+  #   pull_policy: unless-stopped
+  #   deploy:
+  #     replicas: 1
+  #     resources:
+  #       limits:
+  #         cpus: "1"
+  #         memory: 2048M
+  #   restart: unless-stopped
+  #   environment:
+  #     - DATABASE_URL=${DATABASE_URL}
+  #     - MODE=worker
+  #     - WORKER_GROUP=reports
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   # to mount the worker folder to debug, KEEP_JOB_DIR=true and mount /tmp/windmill
+  #   volumes:
+  #     # mount the docker socket to allow to run docker containers from within the workers
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - worker_dependency_cache:/tmp/windmill/cache
+
+  lsp:
+    image: ghcr.io/windmill-labs/windmill-lsp:latest
+    pull_policy: "always"
+    restart: unless-stopped
+    expose:
+      - ${WINDMILL_LSP_PORT}
+    ports:
+      - ${WINDMILL_LSP_HOST_PORT}:${WINDMILL_LSP_PORT}
+    volumes:
+      - lsp-lsp_cache-volume:/root/.cache
+    networks:
+      - nt-workflow
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+  multiplayer:
+    image: ghcr.io/windmill-labs/windmill-multiplayer:latest
+    deploy:
+      replicas: 0 # Set to 1 to enable multiplayer, only available on Enterprise Edition
+    restart: unless-stopped
+    expose:
+      - ${WINDMILL_MULTIPLAYER_PORT}
+    networks:
+      - nt-workflow
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+  # caddy:
+  #   image: caddy:2.5.2-alpine
+  #   restart: unless-stopped
+
+  #   # Configure the mounted Caddyfile and the exposed ports or use another reverse proxy if needed
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
+  #     # - ./certs:/certs # Provide custom certificate files like cert.pem and key.pem to enable HTTPS - See the corresponding section in the Caddyfile
+  #   ports:
+  #     # To change the exposed port, simply change 80:80 to <desired_port>:80. No other changes needed
+  #     - 80:80
+  #     # - 443:443 # Uncomment to enable HTTPS handling by Caddy
+  #   environment:
+  #     - BASE_URL=":80"
+  #     # - BASE_URL=":443" # uncomment and comment line above to enable HTTPS via custom certificate and key files
+  #     # - BASE_URL=mydomain.com # Uncomment and comment line above to enable HTTPS handling by Caddy
+
+volumes:
+  windmill_server-worker_logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/windmill/server/worker_logs
+  windmill_worker-worker_dependency_cache-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/windmill/worker/worker_dependency_cache
+  windmill_worker-worker_logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/windmill/worker/worker_logs
+  lsp-lsp_cache-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/windmill/lsp/lsp_cache
+  windmill_worker_native-worker_logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/windmill/worker_native/worker_logs

@@ -1,0 +1,80 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    hostname: traefik
+    restart: unless-stopped
+    # extra_hosts:
+    #   - 'host.docker.internal:host-gateway'
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    expose:
+      - ${TRAEFIK_PORT}
+    ports:
+      - 80:80
+      - 443:443
+    command:
+      - '--log.level=INFO'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-conf-volume:/etc/traefik:rw
+      - traefik-certs-volume:/certs:rw
+      - traefik-log-volume:/var/log/traefik:rw
+    healthcheck:
+      test: ['CMD', 'traefik', 'healthcheck', '--ping']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    networks:
+      - nt-default
+      - nt-qa
+      - nt-databases
+      - nt-message-broker
+    logging: *logging
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-default
+    #   - traefik.http.services.traefik.loadbalancer.server.port=${TRAEFIK_PORT}
+    #   - traefik.http.routers.traefik.rule=Host(`${DEFAULT_URL}`)
+    #   - traefik.http.routers.traefik.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.traefik-secure.rule=Host(`${DEFAULT_URL}`)
+    #   - traefik.http.routers.traefik-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.traefik.middlewares=web-redirect-websecure
+    #   # HTTP auth:
+    #   # This is were you need to paste the result of the command above:
+    #   - "traefik.http.middlewares.traefik-auth.basicauth.usersfile=/etc/traefik/users.yml"
+    #   # Declaring the middleware chain:
+    #   - traefik.http.routers.traefik-secure.middlewares=secured
+    #   # Add all middlewares in the chain:
+    #   - traefik.http.middlewares.secured.chain.middlewares=web-redirect-websecure,traefik-auth
+
+volumes:
+  traefik-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/traefik/conf
+  traefik-log-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/traefik/logs
+  traefik-certs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/traefik/certs

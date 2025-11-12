@@ -1,0 +1,17 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-searchengine
+
+networks:
+  nt-searchengine:
+    name: nt-searchengine
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-databases:
+    external: true
+  nt-observability:
+    external: true
+
+include:
+  - Search-Engine/docker-compose.opensearch.yml

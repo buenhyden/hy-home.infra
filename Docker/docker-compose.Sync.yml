@@ -1,0 +1,15 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-sync
+
+networks:
+  nt-sync:
+    name: nt-sync
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-observability:
+    external: true
+
+include:
+  - Sync/docker-compose.syncthing.yml

@@ -1,0 +1,57 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+networks:
+  nt-local:
+    external: true
+
+services:
+  gollum:
+    image: gollumwiki/gollum:master
+    restart: unless-stopped
+    container_name: gollum
+    hostname: gollum
+    expose:
+      - 4567/tcp
+    volumes:
+      - gollum-conf-volume:/etc/gollum:rw
+      - gollum-data-volume:/wiki:rw
+    command:
+      - "--config=/etc/gollum/config.rb"
+    networks:
+      - nt-wiki
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.gollum.loadbalancer.server.port=4567
+    #   - traefik.http.routers.gollum.rule=Host(`gollum.${DEFAULT_URL}`)
+    #   - traefik.http.routers.gollum.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.gollum-secure.rule=Host(`gollum.${DEFAULT_URL}`)
+    #   - traefik.http.routers.gollum-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.gollum.middlewares=web-redirect-websecure
+
+volumes:
+  gollum-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/gollum/data
+  gollum-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/gollum/conf

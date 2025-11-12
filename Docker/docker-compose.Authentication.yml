@@ -1,0 +1,21 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-auth
+
+networks:
+  nt-auth:
+    name: nt-auth
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-qa:
+    external: true
+  nt-databases:
+    external: true
+  nt-observability:
+    external: true
+
+include:
+  - Authentication/docker-compose.keycloak.yml
+  # - Default/docker-compose.infisical.yml
+  # - Default/docker-compose.vaultwarden.yml

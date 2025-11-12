@@ -1,0 +1,80 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+networks:
+  nt-local:
+    # driver: bridge
+    external: true
+
+services:
+  nginx:
+    # image: nginx:latest
+    image: docker.io/bitnami/nginx:1.27
+    container_name: nginx
+    hostname: nginx
+    restart: unless-stopped
+    ports:
+      - ${HTTP_HOST_PORT}:${HTTP_PORT}
+      - ${HTTPS_HOST_PORT}:${HTTPS_PORT}
+      - ${HARBOR_HOST_PORT}:${HARBOR_PORT}
+      # - "${MINIO_HOST_PORT}:${MINIO_PORT}"
+      # - "${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}"
+    volumes:
+      # - nginx-conf-volume:/etc/nginx
+      - nginx-conf-volume:/opt/bitnami/nginx/conf
+      - nginx-logs-volume:/var/log/nginx
+      - nginx-cert-volume:/cert
+    networks:
+      - nt-webserver
+      - nt-qa
+      - nt-databases
+      - nt-message-broker
+      - nt-observability
+      - nt-workflow
+      - nt-devops
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  nginx-prometheus-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-prometheus-exporter
+    hostname: nginx-prometheus-exporter
+    restart: unless-stopped
+    expose:
+      - ${NGINX_EXPORTER}
+    command:
+      - "--nginx.scrape-uri=http://${NGINX_HOSTNAME}:${NGINX_METRIX_PORT}/stub_status"
+      # - '--nginx.plus --nginx.scrape-uri=http://<nginx-plus>:8080/api'
+    networks:
+      - nt-webserver
+      - nt-observability
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+volumes:
+  nginx-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/nginx/conf
+  nginx-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/nginx/logs
+  nginx-cert-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WEB_SERVER_DIR}/nginx/cert
+

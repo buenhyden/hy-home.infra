@@ -1,0 +1,43 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  clutch:
+    image: lyft/clutch:latest
+    container_name: clutch
+    hostname: clutch
+    restart: unless-stopped
+    networks:
+      - nt-webserver
+    logging: *logging
+    expose:
+      - 8080
+    volumes:
+      - clutch-data-volume:/data
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #     - traefik.enable=true
+    #     - traefik.docker.network=nt-local
+    #     - traefik.http.services.clutch.loadbalancer.server.port=8080
+    #     - traefik.http.routers.clutch.rule=Host(`clutch.${DEFAULT_URL}`)
+    #     - traefik.http.routers.clutch.entrypoints=web
+    #     # For https:
+    #     - traefik.http.routers.clutch-secure.rule=Host(`clutch.${DEFAULT_URL}`)
+    #     - traefik.http.routers.clutch-secure.entrypoints=websecure
+    #     - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #     - traefik.http.routers.clutch.middlewares=web-redirect-websecure
+
+volumes:
+  clutch-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRA_MANAGEMENT_DIR}/clutch/data

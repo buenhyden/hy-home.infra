@@ -1,0 +1,242 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    expose:
+      - ${CADVISOR_PORT}
+    # ports:
+    #   - ${CADVISOR_HOST_PORT}:${CADVISOR_PORT}
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    networks:
+      - nt-observability
+      - nt-webserver
+    logging: *logging
+
+  # node-exporter:
+  #   image: prom/node-exporter:latest
+  #   container_name: node-exporter
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /proc:/host/proc:ro
+  #     - /sys:/host/sys:ro
+  #     - /:/rootfs:ro,rslave
+  #   command:
+  #     - "--path.procfs=/host/proc"
+  #     - "--path.rootfs=/rootfs"
+  #     - "--path.sysfs=/host/sys"
+  #     - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+  #   expose:
+  #     - ${NODE_EXPORTER_PORT}
+  #   networks:
+  #     - nt-observability
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #   logging: *logging
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=1h"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver" # enable remote wirte
+    volumes:
+      - prometheus-conf-volume:/etc/prometheus
+      - prometheus-logs-volume:/var/log/prometheus
+      - prometheus-data-volume:/prometheus
+    expose:
+      - ${PROMETHEUS_PORT}
+    # ports:
+    #   - ${PROMETHEUS_HOST_PORT}:${PROMETHEUS_PORT}
+    networks:
+      - nt-observability
+      - nt-databases
+      - nt-message-broker
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-default
+    #   - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    #   - traefik.http.routers.prometheus.rule=Host(`prometheus.${DEFAULT_URL}`)
+    #   - traefik.http.routers.prometheus.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.prometheus-secure.rule=Host(`prometheus.${DEFAULT_URL}`)
+    #   - traefik.http.routers.prometheus-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.prometheus.middlewares=web-redirect-websecure
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - GF_SERVER_ROOT_URL=http://localhost:${GRAFANA_HOST_PORT}
+      - GF_SERVER_DOMAIN=localhost:${GRAFANA_HOST_PORT}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceQLStreaming metricsSummary
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-opensearch-datasource,grafana-piechart-panel,grafana-synthetic-monitoring-app,redis-datasource,redis-app,redis-explorer-app,hamedkarbasi93-kafka-datasource,grafana-github-datasource,simpod-json-datasource,marcusolsson-json-datasource,nagasudhirpulla-api-datasource,percona-percona-app,grafana-polystat-panel
+    volumes:
+      - grafana-conf-volume:/etc/grafana
+      - grafana-logs-volume:/var/log/grafana
+      - grafana-data-volume:/var/lib/grafana
+    expose:
+      - ${GRAFANA_PORT}
+    # ports:
+    #   - ${GRAFANA_HOST_PORT}:${GRAFANA_PORT}
+    depends_on:
+      - prometheus
+    networks:
+      - nt-observability
+      - nt-databases
+      - nt-message-broker
+      - nt-webserver
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-default
+    #   - traefik.http.services.grafana.loadbalancer.server.port=3000
+    #   - traefik.http.routers.grafana.rule=Host(`grafana.${DEFAULT_URL}`)
+    #   - traefik.http.routers.grafana.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.grafana-secure.rule=Host(`grafana.${DEFAULT_URL}`)
+    #   - traefik.http.routers.grafana-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.grafana.middlewares=web-redirect-websecure
+    logging: *logging
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    hostname: alertmanager
+    restart: unless-stopped
+    volumes:
+      - alertmanager-conf-volume:/etc/alertmanager
+      - alertmanager-data-volume:/alertmanager
+    expose:
+      - ${ALERTMANAGER_PORT}
+    # ports:
+    #   - ${ALERTMANAGER_HOST_PORT}:${ALERTMANAGER_PORT}
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    depends_on:
+      - prometheus
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-default
+    #   - traefik.http.services.alertmanager.loadbalancer.server.port=9093
+    #   - traefik.http.routers.alertmanager.rule=Host(`alertmanager.${DEFAULT_URL}`)
+    #   - traefik.http.routers.alertmanager.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.alertmanager-secure.rule=Host(`alertmanager.${DEFAULT_URL}`)
+    #   - traefik.http.routers.alertmanager-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.alertmanager.middlewares=web-redirect-websecure
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    networks:
+      - nt-observability
+      - nt-webserver
+    logging: *logging
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    hostname: pushgateway
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    expose:
+      - ${PUSHGATEWAY_PORT}
+    # ports:
+    #   - ${PUSHGATEWAY_HOST_PORT}:${PUSHGATEWAY_PORT}
+    networks:
+      - nt-observability
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  # thanos:
+  # ######################################################################################
+
+volumes:
+  prometheus-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/prometheus/data
+  prometheus-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/prometheus/conf
+  prometheus-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/prometheus/logs
+  grafana-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/grafana/data
+  grafana-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/grafana/conf
+  grafana-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/grafana/logs
+  alertmanager-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/alertmanager/data
+  alertmanager-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/alertmanager/conf
+  # ######################################################################################

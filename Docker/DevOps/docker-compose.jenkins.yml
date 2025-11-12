@@ -1,0 +1,54 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    hostname: jenkins
+    user: root
+    restart: unless-stopped
+    privileged: true
+    expose:
+      - ${JENKINS_PORT}
+      - ${JENKINS_SLAVE_PORT}
+    ports:
+      - ${JENKINS_HOST_PORT}:${JENKINS_PORT}
+      - ${JENKINS_SLAVE_HOST_PORT}:${JENKINS_SLAVE_PORT}
+    volumes:
+      - jenkins-volume:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.jenkins.loadbalancer.server.port=8080
+    #   - traefik.http.routers.jenkins.rule=Host(`jenkins.${DEFAULT_URL}`)
+    #   - traefik.http.routers.jenkins.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.jenkins-secure.rule=Host(`jenkins.${DEFAULT_URL}`)
+    #   - traefik.http.routers.jenkins-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.jenkins.middlewares=web-redirect-websecure
+    logging: *logging
+    networks:
+      - nt-devops
+      - nt-webserver
+      - nt-databases
+  # ######################################################################################
+
+volumes:
+  jenkins-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CICD_DIR}/jenkins
+  # ######################################################################################

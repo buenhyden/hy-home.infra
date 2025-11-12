@@ -1,0 +1,73 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  syncthing:
+    image: syncthing/syncthing:latest
+    restart: unless-stopped
+    container_name: syncthing
+    ports:
+      - ${SYNCTHING_SYNC_HOST_PORT}:${SYNCTHING_SYNC_PORT}/tcp
+      - ${SYNCTHING_SYNC_HOST_PORT}:${SYNCTHING_SYNC_PORT}/udp
+      - ${SYNCTHING_BROADCASTS_HOST_PORT}:${SYNCTHING_BROADCASTS_PORT}/udp
+      # - ${SYNCTHING_GUI_PORT}:${SYNCTHING_GUI_PORT}
+    expose:
+      - ${SYNCTHING_GUI_PORT}
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${DEFAULT_TIMEZONE}
+      - FILE__USER=${SYNCTHING_USERNAME}
+      - FILE__PASSWORD=${SYNCTHING_PASSWORD}
+    volumes:
+      - syncthing-volume:/var/syncthing:rw
+      - resources-contents-volume:/Sync:rw
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fkLsS -m 2 syncthing:8384/rest/noauth/health | grep -o --color=never OK || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-develop
+    #   - traefik.http.services.syncthing.loadbalancer.server.port=8384
+    #   - traefik.http.routers.syncthing.rule=Host(`syncthing.${DEFAULT_URL}`)
+    #   - traefik.http.routers.syncthing.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.syncthing-secure.rule=Host(`syncthing.${DEFAULT_URL}`)
+    #   - traefik.http.routers.syncthing-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.syncthing.middlewares=web-redirect-websecure
+
+    networks:
+      - nt-sync
+      - nt-webserver
+      - nt-observability
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  syncthing-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_SYNCTHING_DIR}
+  resources-contents-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_RESOURCES_DIR}/Contents
+  # ######################################################################################

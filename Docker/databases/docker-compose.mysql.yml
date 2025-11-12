@@ -1,0 +1,257 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  mysql-exporter:
+    image: prom/mysqld-exporter
+    container_name: mysql-exporter
+    expose:
+      - ${MYSQL_EXPORTER_PORT}
+    depends_on:
+      - mysql-master
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - DATA_SOURCE_NAME=${DEFAULT_USERNAME}:${MYSQL_PASSWORD}@(${MYSQL_MASTER_HOSTNAME}:${MYSQL_PORT})
+    command:
+      - "--mysqld.username=${DEFAULT_USERNAME}:${MYSQL_PASSWORD}"
+      - "--mysqld.address=${MYSQL_MASTER_HOSTNAME}:${MYSQL_PORT}"
+    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+    networks:
+      - nt-databases
+      - nt-observability
+      - nt-webserver
+    logging: *logging
+  # proxyweb:
+  #   image: proxyweb/proxyweb:latest
+  #   platform: linux/amd64
+  #   restart: unless-stopped
+  #   container_name: proxyweb
+  #   hostname: proxyweb
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - PROXYSQL_HOST=proxysql
+  #     - PROXYSQL_PORT=6032
+  #   ports:
+  #     - ${PROXYWEB_HOST_PORT}:${PROXYWEB_PORT}
+  #   depends_on:
+  #     - proxysql
+  #   networks:
+  #     - nt-databases
+  # proxysql:
+  #   image: proxysql/proxysql:latest
+  #   container_name: proxysql
+  #   hostname: proxysql
+  #   restart: unless-stopped
+  #   ports:
+  #     - ${PROXYSQL_HOST_ADMIN_PORT}:${PROXYSQL_ADMIN_PORT}
+  #     - ${PROXYSQL_HOST_USER_PORT}:${PROXYSQL_USER_PORT}
+  #     - ${PROXYSQL_HOST_REST_PORT}:${PROXYSQL_REST_PORT}
+  #   volumes:
+  #     - proxysql-data-volume:/var/lib/proxysql
+  #     - proxysql-conf-volume:/etc
+  #   networks:
+  #     - nt-databases
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #   depends_on:
+  #     - mysql-master
+  #     - mysql-slave
+  # orchestrator:
+  #   image: openarkcode/orchestrator:latest
+  #   # 컨테이너 실행 시 재시작
+  #   restart: unless-stopped
+  #   container_name: orchestrator
+  #   hostname: orchestrator
+  #   ports:
+  #     - ${ORCHESTRATOR_HOST_PORT}:${ORCHESTRATOR_PORT}
+  #   volumes:
+  #     - orchestrator-conf-volume:/etc
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #   networks:
+  #     - nt-databases
+  #   depends_on:
+  #     - mysql-master
+  #     - mysql-slave
+  mysql-master:
+    image: docker.io/bitnami/mysql:8.0.39
+    restart: unless-stopped
+    container_name: mysql-master
+    hostname: mysql-master
+    expose:
+      - ${MYSQL_PORT}
+    ports:
+      - ${MYSQL_HOST_MASTER_PORT}:${MYSQL_PORT}
+    volumes:
+      - mysql-master-volume:/bitnami/mysql/data
+    # command:
+    #   - "/opt/bitnami/mysql/bin/mysqld"
+    #   - "--defaults-file=/opt/bitnami/mysql/conf/my.cnf"
+    #   - "--basedir=/opt/bitnami/mysql"
+    #   - "--datadir=/bitnami/mysql/data"
+    #   - "--socket=/opt/bitnami/mysql/tmp/mysql.sock"
+    #   - "--pid-file=/opt/bitnami/mysql/tmp/mysqld.pid"
+    # - "--initialize"
+    environment:
+      # - TZ=${DEFAULT_TIMEZONE}
+      # - MYSQL_BIND_ADDRESS=0.0.0.0
+      # - MYSQL_REPLICATION_MODE=master
+      # - MYSQL_REPLICATION_USER=${RDBMS_REPLICA_USERNAME}
+      # - MYSQL_REPLICATION_PASSWORD=${RDBMS_REPLICA_PASSWORD}
+      - MYSQL_DATABASE=hyden
+      - MYSQL_USER=${DEFAULT_USERNAME}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${RDBMS_ROOT_PASSWORD}
+      - MYSQL_CHARACTER_SET=utf8mb4
+      - MYSQL_COLLATE=utf8mb4_general_ci
+      - MYSQL_AUTHENTICATION_PLUGIN=caching_sha2_password
+    healthcheck:
+      test: ["CMD", "/opt/bitnami/scripts/mysql/healthcheck.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    networks:
+      - nt-databases
+    logging: *logging
+  # mysql-slave:
+  #   image: docker.io/bitnami/mysql:8.0.37
+  #   restart: unless-stopped
+  #   container_name: mysql-slave
+  #   hostname: mysql-slave
+  #   expose:
+  #     - ${MYSQL_PORT}
+  #   # ports:
+  #   #   - ${MYSQL_HOST_SLAVE_PORT}:${MYSQL_PORT}
+  #   depends_on:
+  #     - mysql-master
+  #   volumes:
+  #     - "mysql-slave-volume:/bitnami/mysql/data"
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - MYSQL_REPLICATION_MODE=slave
+  #     - MYSQL_REPLICATION_USER=${RDBMS_REPLICA_USERNAME}
+  #     - MYSQL_REPLICATION_PASSWORD=${RDBMS_REPLICA_PASSWORD}
+  #     - MYSQL_DATABASE=local_hyden
+  #     - MYSQL_USER=${DEFAULT_USERNAME}
+  #     - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+  #     - MYSQL_MASTER_HOST=mysql-master
+  #     - MYSQL_MASTER_PORT_NUMBER=3306
+  #     - MYSQL_MASTER_ROOT_PASSWORD=${RDBMS_ROOT_PASSWORD}
+  #     - MYSQL_REPLICATION_SLAVE_DUMP=false
+  #     - MYSQL_CHARACTER_SET=utf8mb4
+  #     - MYSQL_COLLATE=utf8mb4_general_ci
+  #     - MYSQL_AUTHENTICATION_PLUGIN=mysql_native_password
+  #   healthcheck:
+  #     test: ["CMD", "/opt/bitnami/scripts/mysql/healthcheck.sh"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 6
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  # ######################################################################################
+  # mysql-node1:
+  #   image: mysql:latest
+  #   # 컨테이너 실행 시 재시작
+  #   restart: unless-stopped
+  #   # 컨테이너명 설정
+  #   container_name: mysql-node1
+  #   hostname: mysql-node1
+  #   # 접근 포트 설정 (컨테이너 외부:컨테이너 내부)
+  #   expose:
+  #     - ${MYSQL_PORT}
+  #   ports:
+  #     - ${MYSQL_HOST_NODE_1_PORT}:${MYSQL_PORT}
+  #   # 환경 변수 설정
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${RDBMS_ROOT_PASSWORD}
+  #     MYSQL_USER: ${MYSQL_USERNAME}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #   command:
+  #     - --character-set-server=utf8mb4
+  #     - --collation-server=utf8mb4_unicode_ci
+  #     # - --default-authentication-plugin=caching_sha2_password
+  #     - --default-authentication-plugin=mysql_native_password
+  #   # 볼륨 설정
+  #   volumes:
+  #     - mysql-node1-data-volume:/var/lib/mysql:rw
+  #     - mysql-node1-conf-volume:/etc/mysql:rw
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   labels:
+  #     - "name=mysql-node1"
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  # mysql-exporter:
+  #   image: prom/mysqld-exporter
+  #   container_name: mysql-exporter
+  #   expose:
+  #     - ${MYSQL_EXPORTER_PORT}
+  #   depends_on:
+  #     - mysql-node1
+  #   environment:
+  #     DATA_SOURCE_NAME: ${RDBMS_ROOT_USERNAME}:${RDBMS_ROOT_PASSWORD}@(mysql-node1:${MYSQL_PORT})
+  #   command:
+  #     - "--mysqld.username=${RDBMS_ROOT_USERNAME}:${RDBMS_ROOT_PASSWORD}"
+  #     - "--mysqld.address=mysql:${MYSQL_PORT}"
+  #   # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+volumes:
+  mysql-master-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/mysql/master
+  # mysql-slave-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mysql/slave
+  # proxysql-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mysql/proxysql/data
+  # proxysql-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mysql/proxysql/conf
+  # orchestrator-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/mysql/orchestrator/conf
+  # ######################################################################################
+  mysql-node1-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/mysql/node1/data
+  mysql-node1-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/mysql/node1/conf

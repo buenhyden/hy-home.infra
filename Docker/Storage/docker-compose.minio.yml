@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    hostname: minio
+    container_name: minio
+    networks:
+      - nt-storage
+      - nt-webserver
+      - nt-observability
+    expose:
+      - ${MINIO_PORT}
+      - ${MINIO_CONSOLE_PORT}
+    ports:
+      - "${MINIO_HOST_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}"
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - MINIO_ROOT_USER=${DEFAULT_USERNAME}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
+    command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - minio-data-volume:/data:z
+
+  minio-createbucket:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - nt-storage
+      - nt-webserver
+      - nt-observability
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set supa-minio http://minio:9000 ${DEFAULT_USERNAME} ${MINIO_PASSWORD};
+      /usr/bin/mc mb supa-minio/stub;
+      exit 0;
+      "
+volumes:
+  minio-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_STORAGE_DIR}/minio/data

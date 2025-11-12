@@ -1,0 +1,47 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    hostname: k6
+    restart: unless-stopped
+    networks:
+      - nt-qa
+      - nt-webserver
+      - nt-databases
+    ports:
+      - ${K6_HOST_PORT}:${K6_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - K6_OUT=influxdb=http://${INFLUXDB_DB_NAME}:${INFLUXDB_PORT}/${K6_INFLUXDB_DBNAME}
+    volumes:
+      - k6-scripts-volume:/scripts
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.k6.loadbalancer.server.port=5665
+    #   - traefik.http.routers.k6.rule=Host(`k6.${DEFAULT_URL}`)
+    #   - traefik.http.routers.k6.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.k6-secure.rule=Host(`k6.${DEFAULT_URL}`)
+    #   - traefik.http.routers.k6-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.k6.middlewares=web-redirect-websecure
+    logging: *logging
+
+volumes:
+  k6-scripts-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/k6/scripts
+

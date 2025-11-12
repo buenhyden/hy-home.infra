@@ -1,0 +1,20 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-etc
+
+networks:
+  nt-etc:
+    name: nt-etc
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-qa:
+    external: true
+  nt-databases:
+    external: true
+  nt-observability:
+    external: true
+
+include:
+  - etc/docker-compose.infisical.yml
+  - etc/docker-compose.vaultwarden.yml

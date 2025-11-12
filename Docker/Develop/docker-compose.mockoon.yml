@@ -1,0 +1,44 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  mockoon:
+    image: mockoon/cli:latest
+    container_name: mockoon
+    hostname: mockoon
+    expose:
+      - 3000
+    command: ["--data", "data/generate-mock-data.json", "--port", "3000"]
+    volumes:
+      - mockoon-data-volume:/data:rw
+    networks:
+      - nt-webserver
+      - nt-dev
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.mockoon.loadbalancer.server.port=3000
+    #   - traefik.http.routers.mockoon.rule=Host(`mockoon.${DEFAULT_URL}`)
+    #   - traefik.http.routers.mockoon.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.mockoon-secure.rule=Host(`mockoon.${DEFAULT_URL}`)
+    #   - traefik.http.routers.mockoon-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.mockoon.middlewares=web-redirect-websecure
+
+volumes:
+  mockoon-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_API_MOCKING_DIR}/mockoon/data

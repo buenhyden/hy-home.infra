@@ -1,0 +1,73 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    container_name: outline
+    hostname: outline
+    restart: unless-stopped
+    env_file: .env.outline
+    expose:
+      - 3000
+    volumes:
+      - outline-data-volume:/var/lib/outline/data
+    networks:
+      - nt-wiki
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-wiki
+    #   - traefik.http.services.outline.loadbalancer.server.port=3000
+    #   - traefik.http.routers.outline.rule=Host(`outline.${DEFAULT_URL}`)
+    #   - traefik.http.routers.outline.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.outline-secure.rule=Host(`outline.${DEFAULT_URL}`)
+    #   - traefik.http.routers.outline-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.outline.middlewares=web-redirect-websecure
+
+  # https-portal:
+  #   image: steveltn/https-portal
+  #   env_file: .env.outline
+  #   ports:
+  #     - '80:80'
+  #     - '443:443'
+  #   links:
+  #     - outline
+  #   restart: unless-stopped
+  #   volumes:
+  #     - https-portal-data-volume:/var/lib/https-portal
+  #   healthcheck:
+  #     test: ['CMD', 'service', 'nginx', 'status']
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
+  #   environment:
+  #     DOMAINS: 'docs.mycompany.com -> http://outline:3000'
+  #     STAGE: 'production'
+  #     WEBSOCKET: 'true'
+  #     CLIENT_MAX_BODY_SIZE: '0'
+
+volumes:
+  outline-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/outline/data
+  # https-portal-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_BUILD_INTERNAL_TOOLS_DIR}/outline/http-portal-data

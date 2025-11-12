@@ -1,0 +1,71 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  wiki:
+    image: ghcr.io/requarks/wiki:latest
+    restart: unless-stopped
+    container_name: wiki
+    hostname: wiki
+    expose:
+      - ${WIKI_JS_PORT}
+    # ports:
+    #   - ${WIKI_JS_HOST_PORT}:${WIKI_JS_PORT}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-default
+    #   - traefik.http.services.wiki.loadbalancer.server.port=3000
+    #   - traefik.http.routers.wiki.rule=Host(`wiki.${DEFAULT_URL}`)
+    #   - traefik.http.routers.wiki.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.wiki-secure.rule=Host(`wiki.${DEFAULT_URL}`)
+    #   - traefik.http.routers.wiki-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.wiki.middlewares=web-redirect-websecure
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - ADMIN_EMAIL=${WIKI_JS_EMAIL}
+      - ADMIN_PASS=${WIKI_JS_PASSWORD}
+      - DB_TYPE=postgres
+      - DB_HOST=${POSTGRES_HOSTNAME}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_USER=${DEFAULT_USERNAME}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_NAME=${WIKI_JS_POSTGRES_DBNAME}
+    networks:
+      - nt-wiki
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+    volumes:
+      - wiki-content-volume:/wiki/data/content
+      - wiki-uploads-volume:/wiki/data/uploads
+      - wiki-storage-volume:/storage
+  # ######################################################################################
+
+volumes:
+  wiki-content-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/wikijs/content
+  wiki-storage-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/wikijs/storage
+  wiki-uploads-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WIKI_DIR}/wikijs/uploads
+  # ######################################################################################

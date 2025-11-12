@@ -1,0 +1,126 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  paperless-ngx:
+    container_name: paperless-ngx
+    hostname: paperless-ngx
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    expose:
+      - 8000
+    volumes:
+      - paperless-ngx-data-volume:/usr/src/paperless/data
+      - paperless-ngx-media-volume:/usr/src/paperless/media
+      - paperless-ngx-export-volume:/usr/src/paperless/export
+      - paperless-ngx-consume-volume:/usr/src/paperless/consume
+    env_file: .env.paperless-ngx
+    environment:
+      TZ: ${DEFAULT_TIMEZONE}
+      PAPERLESS_REDIS: redis://:${VALKEY_PREDIXY_PASSWORD}@${VALKEY_PREDIXY_HOSTNAME}:${VALKEY_PREDIXY_PORT}
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: ${POSTGRES_HOSTNAME}
+      PAPERLESS_DBNAME: ${PAPERLESS_NGX_POSTGRES_NAME}
+      PAPERLESS_DBUSER: ${POSTGRES_USER} # only needed if non-default username
+      PAPERLESS_DBPASS: ${POSTGRES_PASSWORD} # only needed if non-default password
+      PAPERLESS_DBPORT: 5432
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.paperless.loadbalancer.server.port=8000
+    #   - traefik.http.routers.paperless.rule=Host(`paperless.${DEFAULT_URL}`)
+    #   - traefik.http.routers.paperless.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.paperless-secure.rule=Host(`paperless.${DEFAULT_URL}`)
+    #   - traefik.http.routers.paperless-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.paperless.middlewares=web-redirect-websecure
+    logging: *logging
+    networks:
+      - nt-etc
+      - nt-webserver
+
+  gotenberg:
+    container_name: gotenberg
+    hostname: gotenberg
+    expose:
+      - 3000
+    image: docker.io/gotenberg/gotenberg:7.10
+    restart: unless-stopped
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.gotenberg.loadbalancer.server.port=3000
+    #   - traefik.http.routers.gotenberg.rule=Host(`gotenberg.${DEFAULT_URL}`)
+    #   - traefik.http.routers.gotenberg.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.gotenberg-secure.rule=Host(`gotenberg.${DEFAULT_URL}`)
+    #   - traefik.http.routers.gotenberg-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.gotenberg.middlewares=web-redirect-websecure
+    logging: *logging
+    networks:
+      - nt-local
+    # The gotenberg chromium route is used to convert .eml files. We do not
+    # want to allow external content like tracking pixels or even javascript.
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+  tika:
+    container_name: tika
+    hostname: tika
+    image: ghcr.io/paperless-ngx/tika:latest
+    expose:
+      - 9998
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.tika.loadbalancer.server.port=9998
+    #   - traefik.http.routers.tika.rule=Host(`tika.${DEFAULT_URL}`)
+    #   - traefik.http.routers.tika.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.tika-secure.rule=Host(`tika.${DEFAULT_URL}`)
+    #   - traefik.http.routers.tika-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.tika.middlewares=web-redirect-websecure
+    logging: *logging
+    networks:
+      - nt-local
+    restart: unless-stopped
+
+volumes:
+  paperless-ngx-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DOC_MANAGEMENT_DIR}/paperless-ngx/data
+  paperless-ngx-media-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DOC_MANAGEMENT_DIR}/paperless-ngx/media
+  paperless-ngx-export-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DOC_MANAGEMENT_DIR}/paperless-ngx/export
+  paperless-ngx-consume-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DOC_MANAGEMENT_DIR}/paperless-ngx/consume

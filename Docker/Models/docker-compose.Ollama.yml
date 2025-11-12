@@ -1,0 +1,48 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "${OLLAMA_PORT}:${OLLAMA_HOST_PORT}"
+    environment:
+      - OLLAMA_ORIGINS=app://obsidian.md*
+      - OLLAMA_HOST=0.0.0.0:${OLLAMA_HOST_PORT}
+    volumes:
+      - ollama-model-volume:/root/.ollama
+    networks:
+      - nt-models
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: webui
+    environment:
+      - OLLAMA_BASE_URL=http://127.0.0.1:${OLLAMA_HOST_PORT}
+    volumes:
+      - ollama-webui-volume:/app/backend/data
+    networks:
+      - nt-models
+    restart: unless-stopped
+
+volumes:
+  ollama-model-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${OLLAMA_FOLDER}/models
+  ollama-webui-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${OLLAMA_FOLDER}/webui

@@ -1,0 +1,48 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  locust-master:
+    image: locustio/locust:latest
+    restart: unless-stopped
+    ports:
+      - ${LOCUST_HOST_PORT}:${LOCUST_PORT}
+    expose:
+      - ${LOCUST_PORT}
+    volumes:
+      - locust-volume:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --master -H http://locust-master:${LOCUST_PORT}
+    logging: *logging
+    networks:
+      - nt-qa
+      - nt-webserver
+      - nt-databases
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+  locust-worker:
+    image: locustio/locust:latest
+    restart: unless-stopped
+    volumes:
+      - locust-volume:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host locust-master
+    logging: *logging
+    networks:
+      - nt-qa
+      - nt-databases
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+volumes:
+  locust-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/locust

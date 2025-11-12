@@ -1,0 +1,202 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+# networks:
+#   nt-databases:
+#     external: true
+
+services:
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    expose:
+      - ${POSTGRES_EXPORTER_PORT}
+    depends_on:
+      - postgres-node-0
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - DATA_SOURCE_NAME="postgresql://postgres:${RDBMS_ROOT_PASSWORD}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/postgres?sslmode=disable"
+    networks:
+      - nt-databases
+      - nt-observability
+      - nt-webserver
+  # pgpool:
+  #   image: docker.io/bitnami/pgpool:latest
+  #   restart: unless-stopped
+  #   container_name: pgpool
+  #   hostname: pgpool
+  #   ports:
+  #     - ${POSTGRES_HOST_PORT}:${POSTGRES_PORT}
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - PGPOOL_BACKEND_NODES=0:postgres-node-0:5432,1:postgres-node-1:5432
+  #     - PGPOOL_SR_CHECK_USER=${POSTGRES_REPMGR_USERNAME}
+  #     - PGPOOL_SR_CHECK_PASSWORD=${POSTGRES_REPMGR_PASSWORD}
+  #     - PGPOOL_ENABLE_LDAP=no
+  #     - PGPOOL_POSTGRES_USERNAME=${PGPOOL_POSTGRES_USERNAME}
+  #     - PGPOOL_POSTGRES_PASSWORD=${RDBMS_ROOT_PASSWORD}
+  #     - PGPOOL_ADMIN_USERNAME=${ADMIN_USERNAME}
+  #     - PGPOOL_ADMIN_PASSWORD=${RDBMS_ROOT_PASSWORD}
+  #     - PGPOOL_ENABLE_LOAD_BALANCING=yes
+  #     # - PGPOOL_DISABLE_LOAD_BALANCE_ON_WRITE
+  #     - PGPOOL_POSTGRES_CUSTOM_USERS=${DEFAULT_USERNAME}
+  #     - PGPOOL_POSTGRES_CUSTOM_PASSWORDS=${POSTGRES_PASSWORD}
+  #     - PGPOOL_NUM_INIT_CHILDREN=64
+  #     - PGPOOL_MAX_POOL=100
+  #   # volumes:
+  #   #   - pgpool-volume:/opt/bitnami/pgpool
+  #   networks:
+  #     - nt-databases
+  #   depends_on:
+  #     - postgres-node-0
+  #     - postgres-node-1
+  #   logging: *logging
+  #   healthcheck:
+  #     test: ["CMD", "/opt/bitnami/scripts/pgpool/healthcheck.sh"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  postgres-node-0:
+    # image: docker.io/bitnami/postgresql-repmgr:latest
+    image: docker.io/bitnami/postgresql:latest
+    restart: unless-stopped
+    container_name: postgres-node-0
+    hostname: postgres-node-0
+    expose:
+      - ${POSTGRES_PORT}
+    ports:
+      - ${POSTGRES_HOST_NODE1_PORT}:${POSTGRES_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - POSTGRESQL_POSTGRES_PASSWORD=${RDBMS_ROOT_PASSWORD}
+      - POSTGRESQL_USERNAME=${DEFAULT_USERNAME}
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      # - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
+      # - REPMGR_NODE_ID=1
+      # - REPMGR_USERNAME=${POSTGRES_REPMGR_USERNAME}
+      # - REPMGR_PASSWORD=${POSTGRES_REPMGR_PASSWORD}
+      # - REPMGR_PRIMARY_HOST=postgres-node-0
+      # - REPMGR_PRIMARY_PORT=5432
+      # - REPMGR_PARTNER_NODES=postgres-node-0,postgres-node-1
+      # - REPMGR_NODE_NAME=postgres-node-0
+      # - REPMGR_NODE_NETWORK_NAME=postgres-node-0
+      # - REPMGR_UPGRADE_EXTENSION=yes
+      # - REPMGR_PORT_NUMBER=5432
+      - POSTGRESQL_MAX_CONNECTIONS=500
+      - POSTGRESQL_USERNAME_CONNECTION_LIMIT=200
+      - POSTGRESQL_POSTGRES_CONNECTION_LIMIT=200
+    volumes:
+      - postgres-node0-volume:/bitnami/postgresql
+    networks:
+      - nt-databases
+    logging: *logging
+
+  # postgres-node-1:
+  #   image: docker.io/bitnami/postgresql-repmgr:latest
+  #   restart: unless-stopped
+  #   container_name: postgres-node-1
+  #   hostname: postgres-node-1
+  #   expose:
+  #     - ${POSTGRES_PORT}
+  #   # ports:
+  #   #   - ${POSTGRES_HOST_NODE2_PORT}:${POSTGRES_PORT}
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - POSTGRESQL_POSTGRES_PASSWORD=${RDBMS_ROOT_PASSWORD}
+  #     - POSTGRESQL_USERNAME=${DEFAULT_USERNAME}
+  #     - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+  #     - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
+  #     # - REPMGR_NODE_ID=2
+  #     - REPMGR_USERNAME=${POSTGRES_REPMGR_USERNAME}
+  #     - REPMGR_PASSWORD=${POSTGRES_REPMGR_PASSWORD}
+  #     - REPMGR_PRIMARY_HOST=postgres-node-0
+  #     # - REPMGR_PRIMARY_PORT=5432
+  #     - REPMGR_PARTNER_NODES=postgres-node-0,postgres-node-1
+  #     - REPMGR_NODE_NAME=postgres-node-1
+  #     - REPMGR_NODE_NETWORK_NAME=postgres-node-1
+  #     - REPMGR_UPGRADE_EXTENSION=yes
+  #     # - REPMGR_PORT_NUMBER=5432
+  #     - POSTGRESQL_MAX_CONNECTIONS=500
+  #     - POSTGRESQL_USERNAME_CONNECTION_LIMIT=200
+  #     - POSTGRESQL_POSTGRES_CONNECTION_LIMIT=200
+  #   volumes:
+  #     - postgres-node1-volume:/bitnami/postgresql
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  #   depends_on:
+  #     - postgres-node-0
+  # ######################################################################################
+  # postgres-node1:
+  #   image: postgres:latest
+  #   restart: unless-stopped
+  #   container_name: postgres-node1
+  #   hostname: postgres-node1
+  #   environment:
+  #     PGUSER: postgres
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: hyden
+  #     PGDATA: /var/lib/postgresql/data
+  #   expose:
+  #     - ${POSTGRES_PORT}
+  #   ports:
+  #     - ${POSTGRES_HOST_PORT}:${POSTGRES_PORT}
+  #   volumes:
+  #     - postgres-node1-data-volume:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  # postgres-exporter:
+  #   image: prometheuscommunity/postgres-exporter:latest
+  #   container_name: postgres-exporter
+  #   expose:
+  #     - ${POSTGRES_EXPORTER_PORT}
+  #   depends_on:
+  #     - postgres-node1
+  #   environment:
+  #     - DATA_SOURCE_NAME="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-node1:${POSTGRES_PORT}/${AIRFLOW_POSTGRES_DB}?sslmode=disable"
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+volumes:
+  postgres-node0-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/postgres/node0
+  # postgres-node1-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/postgres/node1
+  # pgpool-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/postgres/pgpool
+  # ######################################################################################
+  # postgres-node1-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/postgres/node1/data

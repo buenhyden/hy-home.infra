@@ -1,0 +1,51 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  coroot:
+    image: ghcr.io/coroot/coroot:latest
+    container_name: coroot
+    hostname: coroot
+    restart: unless-stopped
+    networks:
+      - nt-webserver
+    logging: *logging
+    expose:
+      - 8080
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+    command:
+      - "--bootstrap-prometheus-url=http://prometheus:9090"
+      - "--bootstrap-refresh-interval=15s"
+    volumes:
+      - coroot-data-volume:/data
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.coroot.loadbalancer.server.port=8080
+    #   - traefik.http.routers.coroot.rule=Host(`coroot.${DEFAULT_URL}`)
+    #   - traefik.http.routers.coroot.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.coroot-secure.rule=Host(`coroot.${DEFAULT_URL}`)
+    #   - traefik.http.routers.coroot-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.coroot.middlewares=web-redirect-websecure
+
+volumes:
+  coroot-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/coroot/data

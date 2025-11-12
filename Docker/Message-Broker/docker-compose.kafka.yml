@@ -1,0 +1,274 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  kafka-ui:
+    image: "provectuslabs/kafka-ui:latest"
+    container_name: kafka-ui
+    hostname: kafka-ui
+    restart: unless-stopped
+    # ports:
+    #   - "${KAFKA_UI_HOST_PORT}:${KAFKA_UI_PORT}"
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - KAFKA_CLUSTERS_0_METRICS_PORT=9997
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-0:${KAFKA_PORT},kafka-1:${KAFKA_PORT},kafka-2:${KAFKA_PORT}
+      - KAFKA_CLUSTERS_0_NAME=${KAFKA_CLSUTER_0_NAME}
+      - KAFKA_CLUSTERS_0_SCHEMAREGISTRY=http://kafka-schema-registry:${SCHEMA_REGISTRY_PORT}
+      - KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME=first
+      - KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS=http://kafka-connect:${KAFKA_CONNECT_PORT}
+      - KAFKA_CLUSTERS_0_KSQLDBSERVER=http://ksqldb-node1:${KSQLDB_PORT}
+      - DYNAMIC_CONFIG_ENABLED=true
+    networks:
+      - nt-message-broker
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+      - kafka-schema-registry
+      - kafka-connect
+  kafka-schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    hostname: kafka-schema-registry
+    container_name: kafka-schema-registry
+    ports:
+      - "${SCHEMA_REGISTRY_HOST_PORT}:${SCHEMA_REGISTRY_PORT}"
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka-0:${KAFKA_PORT},kafka-1:${KAFKA_PORT},kafka-2:${KAFKA_PORT}
+      - SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL=PLAINTEXT
+      - SCHEMA_REGISTRY_HOST_NAME=kafka-schema-registry
+      # - SCHEMA_REGISTRY_HOST_NAME=localhost
+      - SCHEMA_REGISTRY_LISTENERS=http://kafka-schema-registry:${SCHEMA_REGISTRY_PORT}
+    networks:
+      - nt-message-broker
+    logging: *logging
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:latest
+    hostname: kafka-rest-proxy
+    container_name: kafka-rest-proxy
+    restart: unless-stopped
+    ports:
+      - ${KAFKA_REST_PROXY_HOST_PORT}:${KAFKA_REST_PROXY_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - KAFKA_REST_HOST_NAME=kafka-rest-proxy
+      # - KAFKA_REST_HOST_NAME=localhost
+      - KAFKA_REST_BOOTSTRAP_SERVERS=kafka-0:${KAFKA_PORT},kafka-1:${KAFKA_PORT},kafka-2:${KAFKA_PORT}
+      - KAFKA_REST_LISTENERS=http://kafka-rest-proxy:${KAFKA_REST_PROXY_PORT}
+      # - KAFKA_REST_LISTENERS=http://0.0.0.0:8082
+      - KAFKA_REST_SCHEMA_REGISTRY_URL=http://kafka-schema-registry:${SCHEMA_REGISTRY_PORT}
+    networks:
+      - nt-message-broker
+      - nt-webserver
+    logging: *logging
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+      - kafka-schema-registry
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:latest
+    hostname: kafka-connect
+    container_name: kafka-connect
+    restart: unless-stopped
+    ports:
+      - ${KAFKA_CONNECT_HOST_PORT}:${KAFKA_CONNECT_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - CONNECT_BOOTSTRAP_SERVERS=kafka-0:${KAFKA_PORT},kafka-1:${KAFKA_PORT},kafka-2:${KAFKA_PORT}
+      - CONNECT_GROUP_ID=compose-connect-group
+      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_OFFSET_FLUSH_INTERVAL_MS=10000
+      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offset
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://kafka-schema-registry:${SCHEMA_REGISTRY_PORT}
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://kafka-schema-registry:${SCHEMA_REGISTRY_PORT}
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+      #- CONNECT_REST_ADVERTISED_HOST_NAME=localhost
+      - CONNECT_REST_PORT=${KAFKA_CONNECT_PORT}
+      # CLASSPATH required due to CC-2422
+      - CLASSPATH=/usr/share/java/monitoring-interceptors/monitoring-interceptors-7.5.0.jar
+      - CONNECT_PRODUCER_INTERCEPTOR_CLASSES=io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
+      - CONNECT_CONSUMER_INTERCEPTOR_CLASSES=io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
+      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
+      - CONNECT_LOG4J_LOGGERS=org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    networks:
+      - nt-message-broker
+      - nt-webserver
+    logging: *logging
+    depends_on:
+      - kafka-schema-registry
+      - kafka-0
+      - kafka-1
+      - kafka-2
+  kafka-exporter:
+    # https://github.com/danielqsj/kafka_exporter
+    image: danielqsj/kafka-exporter
+    container_name: kafka-exporter
+    hostname: kafka-exporter
+    ports:
+      - ${KAFKA_EXPORTER_HOST_PORT}:${KAFKA_EXPORTER_PORT}
+    expose:
+      - ${KAFKA_EXPORTER_PORT}
+    command: [
+        "--kafka.version=7.6.1",
+        "--kafka.server=kafka-0:${KAFKA_PORT}",
+        "--kafka.server=kafka-1:${KAFKA_PORT}",
+        "--kafka.server=kafka-2:${KAFKA_PORT}",
+        # '--sasl.enabled',
+        # '--sasl.mechanism=plain',
+        # '--sasl.username=${DEFAULT_USERNAME}',
+        # '--sasl.password=${KAFKA_CLIENT_PASSWORD}',
+      ]
+    networks:
+      - nt-message-broker
+      - nt-observability
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+  kafka-0:
+    image: docker.io/bitnami/kafka:latest
+    container_name: kafka-0
+    hostname: kafka-0
+    restart: unless-stopped
+    expose:
+      - ${KAFKA_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - KAFKA_CONTROLLER_USER=${KAFKA_CONTROLLER_USERNAME}
+      - KAFKA_CONTROLLER_PASSWORD=${KAFKA_CONTROLLER_PASSWORD}
+      - KAFKA_CLIENT_USERS=${DEFAULT_USERNAME}
+      - KAFKA_CLIENT_PASSWORDS=${KAFKA_CLIENT_PASSWORD}
+      # KRaft settings
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka-0:${KAFKA_CONTROLLER_PORT},1@kafka-1:${KAFKA_CONTROLLER_PORT},2@kafka-2:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_CLSUTER_ID}
+      # Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://:${KAFKA_PORT}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      # Clustering
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+    networks:
+      - nt-message-broker
+    logging: *logging
+    volumes:
+      - Kafka-cluster0-volume:/bitnami/kafka
+  kafka-1:
+    image: docker.io/bitnami/kafka:latest
+    container_name: kafka-1
+    hostname: kafka-1
+    restart: unless-stopped
+    expose:
+      - ${KAFKA_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - KAFKA_CONTROLLER_USER=${KAFKA_CONTROLLER_USERNAME}
+      - KAFKA_CONTROLLER_PASSWORD=${KAFKA_CONTROLLER_PASSWORD}
+      - KAFKA_CLIENT_USERS=${DEFAULT_USERNAME}
+      - KAFKA_CLIENT_PASSWORDS=${KAFKA_CLIENT_PASSWORD}
+      # KRaft settings
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka-0:${KAFKA_CONTROLLER_PORT},1@kafka-1:${KAFKA_CONTROLLER_PORT},2@kafka-2:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_CLSUTER_ID}
+      # Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://:${KAFKA_PORT}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      # Clustering
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+    networks:
+      - nt-message-broker
+    logging: *logging
+    volumes:
+      - Kafka-cluster1-volume:/bitnami/kafka
+  kafka-2:
+    image: docker.io/bitnami/kafka:latest
+    container_name: kafka-2
+    hostname: kafka-2
+    restart: unless-stopped
+    expose:
+      - ${KAFKA_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - KAFKA_CONTROLLER_USER=${KAFKA_CONTROLLER_USERNAME}
+      - KAFKA_CONTROLLER_PASSWORD=${KAFKA_CONTROLLER_PASSWORD}
+      - KAFKA_CLIENT_USERS=${DEFAULT_USERNAME}
+      - KAFKA_CLIENT_PASSWORDS=${KAFKA_CLIENT_PASSWORD}
+      # KRaft settings
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka-0:${KAFKA_CONTROLLER_PORT},1@kafka-1:${KAFKA_CONTROLLER_PORT},2@kafka-2:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_CLSUTER_ID}
+      # Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://:${KAFKA_PORT}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      # Clustering
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+    networks:
+      - nt-message-broker
+    logging: *logging
+    volumes:
+      - Kafka-cluster2-volume:/bitnami/kafka
+  # ######################################################################################
+
+volumes:
+  Kafka-cluster0-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_MESSAGE_BROKER_DIR}/kafka/cluster0
+  Kafka-cluster1-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_MESSAGE_BROKER_DIR}/kafka/cluster1
+  Kafka-cluster2-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_MESSAGE_BROKER_DIR}/kafka/cluster2
+  # ######################################################################################

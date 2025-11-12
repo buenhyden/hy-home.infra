@@ -1,0 +1,88 @@
+version: "3"
+
+services:
+  cypress-dev:
+    image: cypress/browsers:latest
+    restart: unless-stopped
+    container_name: cypress-dev
+    hostname: cypress-dev
+    expose:
+      - ${CYPRESS_DEBUG_1_PORT}
+      - ${CYPRESS_DEBUG_2_PORT}
+    ports:
+      # Share debugging ports
+      - ${CYPRESS_DEBUG_1_HOST_PORT}:${CYPRESS_DEBUG_1_PORT}
+      - ${CYPRESS_DEBUG_2_HOST_PORT}:${CYPRESS_DEBUG_2_PORT}
+    networks:
+      - nt-qa
+      - nt-webserver
+      - nt-databases
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # Use Hist file from shared volume
+      - HISTFILE=/root/hist/.bash_history
+      # Setup inspect to use the more permissive address when debugging so
+      # that we can connect to it from outside the docker container
+      - CYPRESS_DOCKER_DEV_INSPECT_OVERRIDE=${CYPRESS_DEV_INSPECT_URL}:${CYPRESS_DEBUG_1_PORT}
+      # This disables CI mode which causes cypress to build differently
+      - CI=""
+    command: /bin/bash
+    working_dir: /opt/cypress
+    volumes:
+      # Copy Cypress source to docker container
+      - cypress-volume:/opt/cypress
+      - bash-history-volume:/root/hist
+  cypress-watch:
+    image: cypress/browsers:latest
+    restart: unless-stopped
+    container_name: cypress-watch
+    hostname: cypress-watch
+    networks:
+      - nt-qa
+      - nt-webserver
+      - nt-databases
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # This disables CI mode which causes cypress to build differently
+      - CI=""
+    command: yarn watch
+    working_dir: /opt/cypress`
+    volumes:
+      # Copy Cypress source to docker container
+      - cypress-volume:/opt/cypress
+  # cypress-ci:
+  #   # This should mirror the image used in workflows.yml
+  #   image: cypress/browsers-internal:node18.17.1-chrome118-ff115
+  #   restart: unless-stopped
+  #   container_name: cypress-ci
+  #   hostname: cypress-ci
+  #   expose:
+  #     - ${CYPRESS_DEBUG_1_PORT}
+  #     - ${CYPRESS_DEBUG_2_PORT}
+  #   ports:
+  #     - ${CYPRESS_DEBUG_1_HOST_PORT}:${CYPRESS_DEBUG_1_PORT}
+  #     - ${CYPRESS_DEBUG_2_HOST_PORT}:${CYPRESS_DEBUG_2_PORT}
+  #   command: /bin/bash
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - HISTFILE=/root/hist/.bash_history
+  #     - CYPRESS_DOCKER_DEV_INSPECT_OVERRIDE=${CYPRESS_DEV_INSPECT_URL}:${CYPRESS_DEBUG_1_PORT}
+  #   working_dir: /opt/cypress
+  #   volumes:
+  #     - cypress-volume:/opt/cypress
+  #     - bash-history-volume:/root/hist
+
+# persist terminal history between runs in a virtual volume
+volumes:
+  bash-history-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/cypress/hist
+  cypress-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/cypress/opt

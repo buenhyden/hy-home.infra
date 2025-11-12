@@ -1,0 +1,296 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+x-airflow-common: &airflow-common
+  # In order to add custom dependencies or upgrade provider packages you can use your extended image.
+  # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
+  # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:latest}
+  # build: .
+  environment: &airflow-common-env
+    TZ: ${DEFAULT_TIMEZONE}
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DEFAULT_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/${AIRFLOW_POSTGRES_DBNAME}
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DEFAULT_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/${AIRFLOW_POSTGRES_DBNAME}
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${DEFAULT_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/${AIRFLOW_POSTGRES_DBNAME}
+    # AIRFLOW__CELERY__BROKER_URL: redis://:${PREDIXY_PASSWORD}@${PREDIXY_HOSTNAME}:${PREDIXY_PORT}/0
+    AIRFLOW__CELERY__BROKER_URL: redis://:${VALKEY_PREDIXY_PASSWORD}@${VALKEY_PREDIXY_HOSTNAME}:${PREDIXY_PORT}/0
+    AIRFLOW__CORE__FERNET_KEY: ""
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "true"
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+    AIRFLOW__METRICS__STATSD_ON: "True"
+    AIRFLOW__METRICS__STATSD_HOST: ${STATSD_HOST}
+    AIRFLOW__METRICS__STATSD_PORT: ${STATSD_PORT}
+    AIRFLOW__METRICS__STATSD_PREFIX: "airflow"
+    # yamllint disable rule:line-length
+    # Use simple http server on scheduler for health checks
+    # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
+    # yamllint enable rule:line-length
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
+    # for other purpose (development, test and especially production usage) build/extend Airflow image.
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+  volumes:
+    - ${DEFAULT_WORKFLOW_DIR}/Airflow/dags:/opt/airflow/dags
+    - ${DEFAULT_WORKFLOW_DIR}/Airflow/logs:/opt/airflow/logs
+    - ${DEFAULT_WORKFLOW_DIR}/Airflow/config:/opt/airflow/config
+    - ${DEFAULT_WORKFLOW_DIR}/Airflow/plugins:/opt/airflow/plugins
+  user: "${AIRFLOW_UID}:0"
+  # depends_on: &airflow-common-depends-on
+  #   redis:
+  #     condition: service_healthy
+  #   postgres:
+  #     condition: service_healthy
+
+services:
+  # redis:
+  #   extends:
+  #     file: ../databases/docker-compose.databases.yml
+  #     service: redis
+  # postgres:
+  #   extends:
+  #     file: ../databases/docker-compose.databases.yml
+  #     service: postgres
+  airflow-webserver:
+    <<: *airflow-common
+    restart: unless-stopped
+    container_name: airflow
+    command: webserver
+    healthcheck:
+      test:
+        ["CMD", "curl", "--fail", "airflow:${AIRFLOW_WEBSERVER_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    expose:
+      - ${AIRFLOW_WEBSERVER_PORT}
+    # ports:
+    #   - ${AIRFLOW_WEBSERVER_HOST_PORT}:${AIRFLOW_WEBSERVER_PORT}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.airflow.loadbalancer.server.port=8080
+    #   - traefik.http.routers.airflow.rule=Host(`airflow.${DEFAULT_URL}`)
+    #   - traefik.http.routers.airflow.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.airflow-secure.rule=Host(`airflow.${DEFAULT_URL}`)
+    #   - traefik.http.routers.airflow-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.airflow.middlewares=web-redirect-websecure
+    depends_on:
+      # <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - nt-workflow
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+
+  airflow-scheduler:
+    <<: *airflow-common
+    restart: unless-stopped
+    command: scheduler
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:${AIRFLOW_SCHEDULER_PORT}/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      # <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - nt-workflow
+      - nt-databases
+    logging: *logging
+
+  airflow-worker:
+    <<: *airflow-common
+    restart: unless-stopped
+    command: celery worker
+    healthcheck:
+      # yamllint disable rule:line-length
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    environment:
+      <<: *airflow-common-env
+      # Required to handle warm shutdown of the celery workers properly
+      # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
+      DUMB_INIT_SETSID: "0"
+    depends_on:
+      # <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - nt-workflow
+      - nt-databases
+    logging: *logging
+
+  airflow-triggerer:
+    <<: *airflow-common
+    restart: unless-stopped
+    command: triggerer
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      # <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+    networks:
+      - nt-workflow
+      - nt-databases
+    logging: *logging
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    # yamllint disable rule:line-length
+    command:
+      - -c
+      - |
+        if [[ -z "${AIRFLOW_UID}" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
+          echo "If you are on Linux, you SHOULD follow the instructions below to set "
+          echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
+          echo "For other operating systems you can get rid of the warning with manually created .env file:"
+          echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#setting-the-right-airflow-user"
+          echo
+        fi
+        one_meg=1048576
+        mem_available=$$(($$(getconf _PHYS_PAGES) * $$(getconf PAGE_SIZE) / one_meg))
+        cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
+        disk_available=$$(df / | tail -1 | awk '{print $$4}')
+        warning_resources="false"
+        if (( mem_available < 4000 )) ; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
+          echo "At least 4GB of memory required. You have $$(numfmt --to iec $$((mem_available * one_meg)))"
+          echo
+          warning_resources="true"
+        fi
+        if (( cpus_available < 2 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
+          echo "At least 2 CPUs recommended. You have $${cpus_available}"
+          echo
+          warning_resources="true"
+        fi
+        if (( disk_available < one_meg * 10 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
+          echo "At least 10 GBs recommended. You have $$(numfmt --to iec $$((disk_available * 1024 )))"
+          echo
+          warning_resources="true"
+        fi
+        if [[ $${warning_resources} == "true" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
+          echo "Please follow the instructions to increase amount of resources available:"
+          echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
+          echo
+        fi
+        mkdir -p /sources/logs /sources/dags /sources/plugins
+        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+        exec /entrypoint airflow version
+    # yamllint enable rule:line-length
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_WWW_USER_USERNAME}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_WWW_USER_PASSWORD}
+      _PIP_ADDITIONAL_REQUIREMENTS: ""
+    user: "0:0"
+    volumes:
+      - ${DEFAULT_WORKFLOW_DIR}/Airflow:/sources
+    networks:
+      - nt-workflow
+      - nt-databases
+    logging: *logging
+
+  airflow-cli:
+    <<: *airflow-common
+    restart: unless-stopped
+    profiles:
+      - debug
+    environment:
+      <<: *airflow-common-env
+      CONNECTION_CHECK_MAX_COUNT: "0"
+    # Workaround for entrypoint issue. See: https://github.com/apache/airflow/issues/16252
+    command:
+      - bash
+      - -c
+      - airflow
+    networks:
+      - nt-workflow
+      - nt-databases
+    logging: *logging
+
+  statsd-exporter:
+    image: prom/statsd-exporter:latest
+    container_name: statsd-exporter
+    hostname: statsd-exporter
+    restart: unless-stopped
+    volumes:
+      - statsd-conf-volume:/etc/statsd-exporter
+    entrypoint: ["/bin/sh", "-c", "--"]
+    command:
+      [
+        "statsd_exporter --statsd.listen-udp=:${STATSD_PORT} --web.listen-address=:${STATSD_WEB_PORT} --log.level debug --statsd.mapping-config=/etc/statsd-exporter/statsd.conf",
+      ]
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.statsd.loadbalancer.server.port=9102
+    #   - traefik.http.routers.statsd.rule=Host(`statsd.${DEFAULT_URL}`)
+    #   - traefik.http.routers.statsd.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.statsd-secure.rule=Host(`statsd.${DEFAULT_URL}`)
+    #   - traefik.http.routers.statsd-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.statsd.middlewares=web-redirect-websecure
+    expose:
+      - ${STATSD_PORT}/udp
+      - ${STATSD_WEB_PORT}
+    networks:
+      - nt-workflow
+      - nt-observability
+    logging: *logging
+
+volumes:
+  statsd-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_WORKFLOW_DIR}/Airflow-statsd/conf

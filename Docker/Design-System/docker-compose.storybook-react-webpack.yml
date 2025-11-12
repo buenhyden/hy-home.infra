@@ -1,0 +1,52 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  storybook-react-webpack:
+    build:
+      context: ../../_Builds/storybook/react-webpack
+      dockerfile: Dockerfile
+    image: storybook-react-webpack:latest
+    container_name: storybook-react-webpack
+    hostname: storybook-react-webpack
+    restart: unless-stopped
+    expose:
+      - ${STORYBOOK_PORT}
+    # ports:
+    #   - ${STORYBOOK_REACT_WEBPACK_PORT}:${STORYBOOK_PORT}
+    # labels:
+    #   - 'traefik.enable=true'
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.storybook-react.loadbalancer.server.port=6006
+    #   - traefik.http.routers.storybook-react.rule=Host(`storybook-react.${DEFAULT_URL}`)
+    #   - traefik.http.routers.storybook-react.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.storybook-react-secure.rule=Host(`storybook-react.${DEFAULT_URL}`)
+    #   - traefik.http.routers.storybook-react-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.storybook-react.middlewares=web-redirect-websecure
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    volumes:
+      - storybook-react-webpack-app-volume:/usr/app
+    networks:
+      - nt-design-system
+      - nt-databases
+      - nt-message-broker
+      - nt-observability
+      - nt-webserver
+    logging: *logging
+
+volumes:
+  storybook-react-webpack-app-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DESIGN_SYSTEM_DIR}/storybook-react-webpack

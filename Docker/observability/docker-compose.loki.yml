@@ -1,0 +1,50 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    expose:
+      - ${LOKI_PORT}
+    ports:
+      - ${LOKI_HOST_PORT}:${LOKI_PORT}
+    volumes:
+      - loki-conf-volume:/etc/loki
+      - loki-logs-volume:/var/log/loki
+      - loki-data-volume:/loki
+    command: -config.file=/etc/loki/loki.yaml
+    networks:
+      - nt-observability
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+
+volumes:
+  loki-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/loki/conf
+  loki-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/loki/logs
+  loki-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OBSERVABILITY_DIR}/loki/data
+

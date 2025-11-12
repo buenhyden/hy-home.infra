@@ -1,0 +1,62 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  vector:
+    image: timberio/vector:0.39.0-debian
+    container_name: vector
+    hostname: vector
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://vector:${VECTOR_HEALTH_PORT}/health",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    volumes:
+      - vector-conf-volume:/etc/vector:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose:
+      - ${VECTOR_PORT}
+    ports:
+      - ${VECTOR_HOST_PORT}:${VECTOR_PORT}
+    networks:
+      - nt-data-collector
+      - nt-supabase
+      - nt-observability
+      - nt-databases
+      - nt-default
+      - nt-message-broker
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  vector-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/vector/conf
+  vector-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/vector/logs
+  # ######################################################################################

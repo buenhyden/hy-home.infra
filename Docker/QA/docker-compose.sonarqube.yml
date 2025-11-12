@@ -1,0 +1,64 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  sonarqube:
+    #image: docker.io/bitnami/sonarqube:latest
+    image: sonarqube:lts-community
+    container_name: sonarqube
+    hostname: sonarqube
+    restart: unless-stopped
+    expose:
+      - ${SONARQUBE_PORT}
+    # ports:
+    #   - ${SONARQUBE_HOST_PORT}:${SONARQUBE_PORT}
+    volumes:
+      - sonarqube-data-volume:/opt/sonarqube/data
+      - sonarqube-extensions-volume:/opt/sonarqube/extensions
+      - sonarqube-logs-volume:/opt/sonarqube/logs
+    networks:
+      - nt-qa
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - SONAR_JDBC_URL=jdbc:postgresql://${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${SONARQUBE_POSTGRES_DBNAME}
+      - SONAR_JDBC_USERNAME=${DEFAULT_USERNAME}
+      - SONAR_JDBC_PASSWORD=${POSTGRES_PASSWORD}
+
+    #   # ALLOW_EMPTY_PASSWORD is recommended only for development.
+    #   - SONARQUBE_USERNAME=${DEFAULT_USERNAME}
+    #   - SONARQUBE_PASSWORD=${SONARQUBE_PASSWORD}
+    #   - SONARQUBE_DATABASE_HOST=${POSTGRES_HOSTNAME}
+    #   - SONARQUBE_DATABASE_PORT_NUMBER=${POSTGRES_PORT}
+    #   - SONARQUBE_DATABASE_USER=${DEFAULT_USERNAME}
+    #   - SONARQUBE_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+    #   - SONARQUBE_DATABASE_NAME=${SONARQUBE_DATABASE_NAME}
+    #   - SONARQUBE_SKIP_BOOTSTRAP=yes
+volumes:
+  sonarqube-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/sonarqube/data
+  sonarqube-extensions-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/sonarqube/extensions
+  sonarqube-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TESTING_DIR}/sonarqube/logs
+

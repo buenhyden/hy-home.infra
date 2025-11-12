@@ -1,0 +1,47 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+services:
+  oap:
+    image: apache/skywalking-oap-server:8.7.0
+    container_name: skywalking-oap
+    hostname: skywalking-oap
+    restart: unless-stopped
+    ports:
+      - "12800:12800"
+      - "11800:11800"
+    expose:
+      - 12800
+      - 11800
+    networks:
+      - 
+      - 
+    logging: *logging    
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - SW_STORAGE=elasticsearch
+      - SW_STORAGE_ES_CLUSTER_NODES=elasticsearch:9200
+
+  ui:
+    image: apache/skywalking-ui:8.7.0
+    container_name: skywalking-ui
+    hostname: skywalking-ui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    expose:
+      - 8080
+    networks:
+      - 
+      - 
+    logging: *logging    
+    depends_on:
+      - oap
+
+volumes:

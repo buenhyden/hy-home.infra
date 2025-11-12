@@ -1,0 +1,114 @@
+version: "3.7"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+# Settings and configurations that are common for all containers
+x-minio-common: &minio-common
+  image: quay.io/minio/minio:latest
+  # command: server --console-address ":${MINIO_CONSOLE_PORT}" http://minio{1...4}/data{1...2}
+  command: server --console-address ":${MINIO_CONSOLE_PORT}" http://minio{1...4}/data
+  expose:
+    - ${MINIO_PORT}
+    - ${MINIO_CONSOLE_PORT}
+  healthcheck:
+    test: ["CMD", "mc", "ready", "local"]
+    interval: 5s
+    timeout: 5s
+    retries: 5
+  networks:
+    - nt-storage
+    - nt-webserver
+    - nt-observability
+  logging: *logging
+  environment:
+    - TZ=${DEFAULT_TIMEZONE}
+    - MINIO_ROOT_USER=${DEFAULT_USERNAME}
+    - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
+
+# starts 4 docker containers running minio server instances.
+# using nginx reverse proxy, load balancing, you can access
+# it through port 9000.
+services:
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    container_name: minio1
+    volumes:
+      - minio-data1-volume:/data
+  minio2:
+    <<: *minio-common
+    hostname: minio2
+    container_name: minio2
+    volumes:
+      - minio-data2-volume:/data
+  minio3:
+    <<: *minio-common
+    hostname: minio3
+    container_name: minio3
+    volumes:
+      - minio-data3-volume:/data
+  minio4:
+    <<: *minio-common
+    hostname: minio4
+    container_name: minio4
+    volumes:
+      - minio-data4-volume:/data
+
+  # minio-nginx:
+  #   image: nginx:1.19.2-alpine
+  #   hostname: minio-nginx
+  #   container_name: minio-nginx
+  #   volumes:
+  #     - minio-nginx-volume:/etc/nginx:ro
+  #   networks:
+  #     - nt-default
+  #     - nt-observability
+  #   ports:
+  #     - '${MINIO_HOST_PORT}:${MINIO_PORT}'
+  #     - '${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}'
+  #   depends_on:
+  #     - minio1
+  #     - minio2
+  #     - minio3
+  #     - minio4
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  # ######################################################################################
+
+## By default this config uses default local driver,
+## For custom volumes replace with volume driver configuration.
+volumes:
+  # minio-nginx-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_STORAGE_DIR}/minio/nginx
+  minio-data1-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_STORAGE_DIR}/minio/data1
+  minio-data2-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_STORAGE_DIR}/minio/data2
+  minio-data3-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_STORAGE_DIR}/minio/data3
+  minio-data4-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_STORAGE_DIR}/minio/data4
+  # ######################################################################################

@@ -1,0 +1,47 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+services:
+  # OpenTelemetry Collector
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-col
+    hostname: otel-col
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    command: ['--config=/etc/otelcol/otelcol-config.yml', '--config=/etc/otelcol/otelcol-config-extras.yml']
+    volumes:
+      - otelcol-conf-volume:/etc/otelcol
+    ports:
+      - '4317'
+      - '4318'
+    networks:
+      - nt-local
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+  # ######################################################################################
+
+volumes:
+  otelcol-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/opentelemetry/conf
+  otelcol-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATA_COLLECTOR_DIR}/opentelemetry/logs
+  # ######################################################################################

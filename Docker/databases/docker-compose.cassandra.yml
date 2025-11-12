@@ -1,0 +1,109 @@
+# Use root/example as user/password credentials
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  cassandra-exporter:
+    image: bitnami/cassandra-exporter:latest
+    container_name: cassandra-exporter
+    hostname: cassandra-exporter
+    restart: unless-stopped
+    expose:
+      - ${CASSANDRA_EXPORTER_PORT}
+      - ${CASSANDRA_EXPORTER_LISTEN_PORT}
+    depends_on:
+      - cassandra-node1
+      # - cassandra-node2
+    networks:
+      - nt-databases
+      - nt-observability
+      - nt-webserver
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    logging: *logging
+    volumes:
+      - cassandra-exporter-volume:/opt/bitnami/cassandra-exporter/conf
+    command: java -jar ./cassandra_exporter.jar ./conf/config.yml
+
+  cassandra-node1:
+    #image: cassandra:latest
+    image: docker.io/bitnami/cassandra:latest
+    container_name: cassandra-node1
+    hostname: cassandra-node1
+    restart: unless-stopped
+    # ports:
+    #   - ${CASSANDRA_HOST_NODE1_CLIENT_PORT}:${CASSANDRA_CLIENT_PORT}
+    expose:
+      - ${CASSANDRA_INTER_NODE_PORT}
+      - ${CASSANDRA_CLIENT_PORT}
+    networks:
+      - nt-databases
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - CASSANDRA_SEEDS=cassandra-node1
+      # - CASSANDRA_SEEDS=cassandra-node1,cassandra-node2
+      # - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_USER=${DEFAULT_USERNAME}
+      - CASSANDRA_PASSWORD=${CASSANDRA_PASSWORD}
+      # By default, Cassandra autodetects the available host memory and takes as much as it can.
+      # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
+      - MAX_HEAP_SIZE=2G
+      - HEAP_NEWSIZE=200M
+    volumes:
+      - cassandra-node1-volume:/bitnami/cassandra
+  # cassandra-node2:
+  #   #image: cassandra:latest
+  #   image: docker.io/bitnami/cassandra:latest
+  #   container_name: cassandra-node2
+  #   hostname: cassandra-node2
+  #   restart: unless-stopped
+  #   ports:
+  #     - ${CASSANDRA_HOST_NODE2_CLIENT_PORT}:${CASSANDRA_CLIENT_PORT}
+  #   expose:
+  #     - ${CASSANDRA_INTER_NODE_PORT}
+  #     - ${CASSANDRA_CLIENT_PORT}
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     - CASSANDRA_SEEDS=cassandra-node1,cassandra-node2
+  #     - CASSANDRA_CLUSTER_NAME=cassandra-cluster
+  #     - CASSANDRA_PASSWORD_SEEDER=yes
+  #     - CASSANDRA_USER=${DEFAULT_USERNAME}
+  #     - CASSANDRA_PASSWORD=${CASSANDRA_PASSWORD}
+  #     # By default, Cassandra autodetects the available host memory and takes as much as it can.
+  #     # Therefore, memory options are mandatory if multiple Cassandras are launched in the same node.
+  #     - MAX_HEAP_SIZE=2G
+  #     - HEAP_NEWSIZE=200M
+  #   volumes:
+  #     - cassandra-node2-volume:/bitnami/cassandra
+  #   depends_on:
+  #     - cassandra-node1
+
+volumes:
+  cassandra-node1-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/cassandra/node1
+  # cassandra-node2-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/cassandra/node2
+  cassandra-exporter-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/cassandra/exporter
+

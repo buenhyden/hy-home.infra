@@ -1,0 +1,36 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    hostname: authelia
+    restart: unless-stopped
+    volumes:
+      - authelia-conf-volume:/config:rw
+    networks:
+      - nt-auth
+      - nt-webserver
+    logging: *logging
+    expose:
+      - ${AUTHELIA_PORT}
+    healthcheck:
+      ## In production the healthcheck section should be commented.
+      disable: true
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+
+volumes:
+  authelia-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AUTHENTICATION_DIR}/authelia/conf

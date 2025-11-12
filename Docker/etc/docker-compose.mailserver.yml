@@ -1,0 +1,78 @@
+# Use root/example as user/password credentials
+version: '3.9'
+
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '5m'
+    max-file: '2'
+
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    # Provide the FQDN of your mail server here (Your DNS MX record should point to this value)
+    hostname: ${DEFAULT_URL}
+    # env_file: .env.mailserver
+    # More information about the mail-server ports:
+    # https://docker-mailserver.github.io/docker-mailserver/latest/config/security/understanding-the-ports/
+    ports:
+      - '${MAILSERVER_SMTP_HOST_PORT}:${MAILSERVER_SMTP_PORT}' # SMTP  (explicit TLS => STARTTLS, Authentication is DISABLED => use port 465/587 instead)
+      - '${MAILSERVER_IMAP4_EXPLICIT_HOST_PORT}:${MAILSERVER_IMAP4_EXPLICIT_PORT}' # IMAP4 (explicit TLS => STARTTLS)
+      - '${MAILSERVER_ESMTP_IMPLICIT_HOST_PORT}:${MAILSERVER_ESMTP_IMPLICIT_PORT}' # ESMTP (implicit TLS)
+      - '${MAILSERVER_ESMTP_EXPLICIT_HOST_PORT}:${MAILSERVER_ESMTP_EXPLICIT_PORT}' # ESMTP (explicit TLS => STARTTLS)
+      - '${MAILSERVER_IMAP4_IMPLICIT_HOST_PORT}:${MAILSERVER_IMAP4_IMPLICIT_PORT}' # IMAP4 (implicit TLS)
+    networks:
+      - nt-default
+    volumes:
+      - mailserver-data-volume:/var/mail
+      - mailserver-state-volume:/var/mail-state
+      - mailserver-logs-volume:/var/log/mail
+      - mailserver-conf-volume:/tmp/docker-mailserver
+      # - ${mailserver-volume}/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    stop_grace_period: 1m
+    # Uncomment if using `ENABLE_FAIL2BAN=1`:
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - ENABLE_FAIL2BAN=1
+      # Using letsencrypt for SSL/TLS certificates:
+      # - SSL_TYPE=letsencrypt
+      # Allow sending emails from other docker containers:
+      # Beware creating an Open Relay: https://docker-mailserver.github.io/docker-mailserver/latest/config/environment/#permit_docker
+      - PERMIT_DOCKER=network
+      # You may want to enable this: https://docker-mailserver.github.io/docker-mailserver/latest/config/environment/#spoof_protection
+      # See step 6 below, which demonstrates setup with enabled/disabled SPOOF_PROTECTION:
+      - SPOOF_PROTECTION=0
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: "ss --listening --tcp | grep -P 'LISTEN.+:smtp' || exit 1"
+      timeout: 3s
+      retries: 0
+
+volumes:
+  mailserver-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRASTRUCTURE_DIR}/mailserver/mail-data
+  mailserver-state-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRASTRUCTURE_DIR}/mailserver/mail-state
+  mailserver-logs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRASTRUCTURE_DIR}/mailserver/mail-logs
+  mailserver-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFRASTRUCTURE_DIR}/mailserver/conf

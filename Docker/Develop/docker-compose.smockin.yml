@@ -1,0 +1,36 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  smockin:
+    image: mgallina/smockin:2201
+    container_name: smockin
+    hostname: smockin
+    expose:
+      - 8000
+      - 8001
+      - 8002
+      - 8003
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.smockin.loadbalancer.server.port=8000
+    #   - traefik.http.routers.smockin.rule=Host(`smockin.${DEFAULT_URL}`)
+    #   - traefik.http.routers.smockin.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.smockin-secure.rule=Host(`smockin.${DEFAULT_URL}`)
+    #   - traefik.http.routers.smockin-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.smockin.middlewares=web-redirect-websecure
+    networks:
+      - nt-webserver
+      - nt-dev
+    logging: *logging

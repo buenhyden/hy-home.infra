@@ -1,0 +1,23 @@
+.history/
+Infisical Emergency Kit.pdf
+.vscode/
+.env
+.env.example
+_Builds/
+_Tool-Settings/
+_Roadmaps/
+_Example/
+hosts.txt
+Setting_Database.txt
+Certs/
+Docker/automatisch/.env.huginn
+Docker/Automation/.env.huginn
+Docker/Wiki/.env.outline
+Docker/Supabase/.env.supabase
+Docker/etc/.env.infisical
+Docker/etc/.env.mailserver
+Docker/etc/.env.paperless-ngx
+Docker/etc/.env.vaultwarden
+Docker/Incident-Management/.env.dispatch
+Docker/Notification/.env.novu
+_Docs/클라우드_취약점_점검_가이드.pdf

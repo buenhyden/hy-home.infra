@@ -1,0 +1,22 @@
+# Use root/example as user/password credentials
+version: "3.9"
+name: system-models
+
+networks:
+  nt-models:
+    name: nt-models
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-qa:
+    external: true
+  nt-databases:
+    external: true
+  nt-observability:
+    external: true
+  nt-message-broker:
+    external: true
+    
+include:
+  - Models/docker-compose.Ollama.yml
+  

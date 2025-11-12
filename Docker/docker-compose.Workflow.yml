@@ -1,0 +1,19 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+name: system-workflow
+
+networks:
+  nt-workflow:
+    name: nt-workflow
+    driver: bridge
+  nt-webserver:
+    external: true
+  nt-databases:
+    external: true
+  nt-observability:
+    external: true
+
+include:
+  - Workflow/docker-compose.airflow.yml
+  # - Workflow/docker-compose.windmill.yml

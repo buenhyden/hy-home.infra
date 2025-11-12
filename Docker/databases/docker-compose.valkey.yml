@@ -1,0 +1,195 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  valkey-predixy:
+    image: haandol/predixy:latest
+    restart: unless-stopped
+    container_name: valkey-predixy
+    hostname: valkey-predixy
+    command: predixy etc/predixy/conf/predixy.conf
+    volumes:
+      - valkey-predixy-conf-volume:/etc/predixy/conf
+      - valkey-predixy-log-volume:/etc/logs
+    expose:
+      - ${VALKEY_PREDIXY_PORT}
+    ports:
+      - "${VALKEY_PREDIXY_HOST_PORT}:${VALKEY_PREDIXY_PORT}"
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    depends_on:
+      - valkey-node-1
+      - valkey-node-2
+      - valkey-node-3
+    networks:
+      - nt-databases
+    logging: *logging
+
+  valkey-cluster-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: valkey-cluster-exporter
+    hostname: valkey-cluster-exporter
+    expose:
+      - ${REDIS_EXPORTER_PORT}
+    command:
+      - "--redis.addr=redis://valkey-node-1:${VALKEY_PORT},redis://valkey-node-2:${VALKEY_PORT},redis://valkey-node-3:${VALKEY_PORT}"
+      - "--redis.password=${VALKEY_PASSWORD}"
+      - "--is-cluster"
+    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    depends_on:
+      - valkey-node-1
+      - valkey-node-2
+      - valkey-node-3
+    networks:
+      - nt-databases
+      - nt-observability
+    logging: *logging
+
+  valkey-node-1:
+    image: docker.io/bitnami/valkey-cluster:latest
+    restart: unless-stopped
+    container_name: valkey-node-1
+    hostname: valkey-node-1
+    volumes:
+      - valkey-node1-data-volume:/bitnami/valkey/data
+    # ports:
+    #   - '${VALKEY_CLUSTER_HOST_PORT}:${VALKEY_PORT}'
+    expose:
+      - ${VALKEY_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # - REDIS_REPLICATION_MODE=master
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+      # - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - "VALKEY_NODES=valkey-node-1 valkey-node-2 valkey-node-3"
+      - REDISCLI_AUTH=bitnami
+      - VALKEY_CLUSTER_REPLICAS=1
+      - VALKEY_CLUSTER_CREATOR=yes
+    networks:
+      - nt-databases
+      - nt-webserver
+    depends_on:
+      - valkey-node-2
+      - valkey-node-3
+    logging: *logging
+
+  valkey-node-2:
+    image: docker.io/bitnami/valkey-cluster:latest
+    restart: unless-stopped
+    container_name: valkey-node-2
+    hostname: valkey-node-2
+    volumes:
+      - valkey-node2-data-volume:/bitnami/valkey/data
+    expose:
+      - ${VALKEY_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+      - "VALKEY_NODES=valkey-node-1 valkey-node-2 valkey-node-3"
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+
+  valkey-node-3:
+    image: docker.io/bitnami/valkey-cluster:latest
+    restart: unless-stopped
+    container_name: valkey-node-3
+    hostname: valkey-node-3
+    volumes:
+      - valkey-node3-data-volume:/bitnami/valkey/data
+    expose:
+      - ${VALKEY_PORT}
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+      - "VALKEY_NODES=valkey-node-1 valkey-node-2 valkey-node-3"
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+
+  valkey-standalone:
+    image: docker.io/bitnami/valkey:latest
+    container_name: valkey-standalone
+    hostname: valkey-standalone
+    restart: unless-stopped
+    ports:
+      - ${VALKEY_STANDALONE_HOST_PORT}:${VALKEY_PORT}
+    expose:
+      - ${VALKEY_PORT}
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+    volumes:
+      - valkey-standalone-data-volume:/bitnami/valkey/data
+  valkey-standalone-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: valkey-standalone-exporter
+    hostname: valkey-standalone-exporter
+    expose:
+      - ${VALKEY_EXPORTER_PORT}
+    command:
+      - "--redis.addr=redis://valkey-node1:${VALKEY_PORT}"
+      - "--redis.password=${VALKEY_PASSWORD}"
+    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    depends_on:
+      - valkey-standalone
+    networks:
+      - nt-databases
+      - nt-observability
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  valkey-node1-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/node1
+  valkey-node2-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/node2
+  valkey-node3-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/node3
+  valkey-standalone-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/standalone
+  valkey-predixy-log-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/predixy/logs
+  valkey-predixy-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/valkey/predixy/conf
+  # ######################################################################################

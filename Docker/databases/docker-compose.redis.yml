@@ -1,0 +1,330 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  # predixy:
+  #   image: haandol/predixy:latest
+  #   restart: unless-stopped
+  #   container_name: predixy
+  #   hostname: predixy
+  #   command: predixy etc/predixy/conf/predixy.conf
+  #   volumes:
+  #     - predixy-conf-volume:/etc/predixy/conf
+  #     - predixy-log-volume:/etc/logs
+  #   expose:
+  #     - ${PREDIXY_PORT}
+  #   ports:
+  #     - '${PREDIXY_HOST_PORT}:${PREDIXY_PORT}'
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #   depends_on:
+  #     - redis-node-1
+  #     - redis-node-2
+  #     - redis-node-3
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  # redis-cluster-exporter:
+  #   image: oliver006/redis_exporter:latest
+  #   container_name: redis-cluster-exporter
+  #   hostname: redis-cluster-exporter
+  #   expose:
+  #     - ${REDIS_EXPORTER_PORT}
+  #   command:
+  #     - '--redis.addr=redis://redis-node-1:${REDIS_PORT},redis://redis-node-2:${REDIS_PORT},redis://redis-node-3:${REDIS_PORT}'
+  #     - '--redis.password=${REDIS_PASSWORD}'
+  #     - '--is-cluster'
+  #   # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #   depends_on:
+  #     - redis-node-1
+  #     - redis-node-2
+  #     - redis-node-3
+  #   networks:
+  #     - nt-databases
+  #     - nt-observability
+  #   logging: *logging
+
+  # redis-node-1:
+  #   image: docker.io/bitnami/redis-cluster:latest
+  #   restart: unless-stopped
+  #   container_name: redis-node-1
+  #   hostname: redis-node-1
+  #   volumes:
+  #     - redis-node1-data-volume:/bitnami/redis/data
+  #   # ports:
+  #   #   - '${REDIS_CLUSTER_HOST_PORT}:${REDIS_PORT}'
+  #   expose:
+  #     - ${REDIS_PORT}
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     # - REDIS_REPLICATION_MODE=master
+  #     - REDIS_PASSWORD=${REDIS_PASSWORD}
+  #     # - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+  #     - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+  #     - REDISCLI_AUTH=bitnami
+  #     - REDIS_CLUSTER_REPLICAS=1
+  #     - REDIS_CLUSTER_CREATOR=yes
+  #   networks:
+  #     - nt-databases
+  #   depends_on:
+  #     - redis-node-2
+  #     - redis-node-3
+  #   logging: *logging
+
+  # redis-node-2:
+  #   image: docker.io/bitnami/redis-cluster:latest
+  #   restart: unless-stopped
+  #   container_name: redis-node-2
+  #   hostname: redis-node-2
+  #   volumes:
+  #     - redis-node2-data-volume:/bitnami/redis/data
+  #   expose:
+  #     - ${REDIS_PORT}
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     # - REDIS_REPLICATION_MODE=master
+  #     - REDIS_PASSWORD=${REDIS_PASSWORD}
+  #     # - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+  #     - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+  #     # - REDISCLI_AUTH=bitnami
+  #     # - REDIS_CLUSTER_REPLICAS=1
+  #     # - REDIS_CLUSTER_CREATOR=yes
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  # redis-node-3:
+  #   image: docker.io/bitnami/redis-cluster:latest
+  #   restart: unless-stopped
+  #   container_name: redis-node-3
+  #   hostname: redis-node-3
+  #   volumes:
+  #     - redis-node3-data-volume:/bitnami/redis/data
+  #   expose:
+  #     - ${REDIS_PORT}
+  #   environment:
+  #     - TZ=${DEFAULT_TIMEZONE}
+  #     # - REDIS_REPLICATION_MODE=master
+  #     - REDIS_PASSWORD=${REDIS_PASSWORD}
+  #     # - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+  #     - 'REDIS_NODES=redis-node-1 redis-node-2 redis-node-3'
+  #     # - REDISCLI_AUTH=bitnami
+  #     # - REDIS_CLUSTER_REPLICAS=1
+  #     # - REDIS_CLUSTER_CREATOR=yes
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  redis-standalone-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-standalone-exporter
+    hostname: redis-standalone-exporter
+    expose:
+      - ${REDIS_EXPORTER_PORT}
+    command:
+      - "--redis.addr=redis://redis-standalone:${REDIS_PORT}"
+      - "--redis.password=${REDIS_PASSWORD}"
+    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+    depends_on:
+      - redis-standalone
+    networks:
+      - nt-databases
+      - nt-observability
+    logging: *logging
+
+  redis-standalone:
+    image: docker.io/bitnami/redis:latest
+    restart: unless-stopped
+    container_name: redis-standalone
+    hostname: redis-standalone
+    ports:
+      - "${REDIS_STANDALONE_HOST_PORT}:${REDIS_PORT}"
+    expose:
+      - ${REDIS_PORT}
+    networks:
+      - nt-databases
+      - nt-webserver
+    logging: *logging
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      # - REDIS_REPLICATION_MODE=master
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis-standalone-data-volume:/bitnami/redis/data
+  # ######################################################################################
+  # redis-node-0:
+  #   # 사용할 이미지
+  #   image: redis:latest
+  #   # 컨테이너 종료시 재시작 여부 설정
+  #   restart: unless-stopped
+  #   # 컨테이너명
+  #   container_name: redis-node-0
+  #   hostname: redis-node-0
+  #   expose:
+  #     - ${REDIS_PORT}
+  #   # 접근 포트 설정(컨테이너 외부:컨테이너 내부)
+  #   ports:
+  #     - ${REDIS_HOST_NODE_0_PORT}:${REDIS_PORT}
+  #   # 스토리지 마운트(볼륨) 설정
+  #   volumes:
+  #     - redis-node-0-data-volume:/data:rw
+  #     - redis-node-0-conf-volume:/usr/local/conf:rw
+  #   command: redis-server /usr/local/conf/redis.conf
+  #   environment:
+  #     - REDIS_REPLICATION_MODE=master
+  #     - REDIS_MASTER_HOST=redis-node-0 # host의 이름이나 IP
+  #     - REDIS_MASTER_SET=master # master이름
+  #     - REDIS_AOF_ENABLED=no # 데이터를 파일에 쓸지 여부를 결정
+  #     - "REDIS_PASSWORD=${REDIS_PASSWORD}"
+  #     - "REDIS_NODES=redis-node-0 redis-node-1"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+  # redis-node-0-slave:
+  #   # 사용할 이미지
+  #   image: redis:latest
+  #   # 컨테이너 종료시 재시작 여부 설정
+  #   restart: unless-stopped
+  #   # 컨테이너명
+  #   container_name: redis-node-0-slave
+  #   hostname: redis-node-0-slave
+  #   expose:
+  #     - ${REDIS_PORT}
+  #   # 접근 포트 설정(컨테이너 외부:컨테이너 내부)
+  #   ports:
+  #     - ${REDIS_HOST_NODE_1_PORT}:${REDIS_PORT}
+  #   # 스토리지 마운트(볼륨) 설정
+  #   volumes:
+  #     - redis-node-0-slave-data-volume:/data:rw
+  #     - redis-node-0-slave-conf-volume:/usr/local/conf:rw
+  #   command: redis-server /usr/local/conf/redis.conf
+  #   environment:
+  #     - REDIS_REPLICATION_MODE=slave
+  #     - REDIS_MASTER_HOST=redis-node-0 # host의 이름이나 IP
+  #     - REDIS_MASTER_SET=master
+  #     - REDIS_AOF_ENABLED=no # 데이터를 파일에 쓸지 여부를 결정
+  #     - "REDIS_PASSWORD=${REDIS_PASSWORD}"
+  #     - "REDIS_NODES=redis-node-0 redis-node-1"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+  # redis-exporter:
+  #   image: oliver006/redis_exporter
+  #   container_name: redis-exporter
+  #   expose:
+  #     - ${REDIS_EXPORTER_PORT}
+  #   command:
+  #     - "--redis.addr=redis://redis-node-0:${REDIS_PORT},redis-node-1:${REDIS_PORT}"
+  #     - "--redis.password=${REDIS_PASSWORD}"
+  #   # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+  #   depends_on:
+  #     - redis-node-0
+  #     - redis-node-0-slave
+  #   networks:
+  #     - nt-databases
+  #   logging: *logging
+
+volumes:
+  # redis-node1-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node1
+  # redis-node2-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node2
+  # redis-node3-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node3
+  redis-standalone-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_DATABASE_DIR}/redis/standalone
+  # redis-node1-slave-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node1-slave
+  # redis-node2-slave-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node2-slave
+  # redis-node3-slave-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node3-slave
+  # predixy-log-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/predixy/logs
+  # predixy-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/predixy/conf
+  # ######################################################################################
+  # redis-node-0-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node-0/data
+  # redis-node-0-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node-0/conf
+  # redis-node-0-slave-data-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node-0-slave/data
+  # redis-node-0-slave-conf-volume:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_DATABASE_DIR}/redis/node-0-slave/conf

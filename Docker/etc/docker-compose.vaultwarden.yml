@@ -1,0 +1,61 @@
+# Use root/example as user/password credentials
+version: "3.9"
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    hostname: vaultwarden
+    restart: unless-stopped
+    volumes:
+      - vaultwarden-data-volume:/data/
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=nt-local
+    #   - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+    #   - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.${DEFAULT_URL}`)
+    #   - traefik.http.routers.vaultwarden.entrypoints=web
+    #   # For https:
+    #   - traefik.http.routers.vaultwarden-secure.rule=Host(`vaultwarden.${DEFAULT_URL}`)
+    #   - traefik.http.routers.vaultwarden-secure.entrypoints=websecure
+    #   - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
+    #   - traefik.http.routers.vaultwarden.middlewares=web-redirect-websecure
+    environment:
+      - TZ=${DEFAULT_TIMEZONE}
+      - POSTGRES_USER=${DEFAULT_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${INFISICAL_POSTGRES_DB}
+      - DATABASE_URL=postgresql://${DEFAULT_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${VAULTWARDEN_POSTGRES_DBNAME}
+      - DOMAIN=http://localhost:${VAULTWARDEN_HOST_PORT}
+      - SMTP_HOST=${MAIL_HOST}
+      - SMTP_PORT=${MAIL_PORT}
+      - SMTP_FROM=${MAIL_FROM}
+      - SMTP_FROM_NAME=Vaultwarden
+      - SMTP_USERNAME=${MAIL_USERNAME}
+      - SMTP_PASSWORD=${MAIL_PASSWORD}
+      - SMTP_TIMEOUT=15
+    expose:
+      - ${VAULTWARDEN_PORT}
+    # ports:
+    #   - ${VAULTWARDEN_HOST_PORT}:${VAULTWARDEN_PORT}
+    networks:
+      - nt-etc
+      - nt-webserver
+      - nt-databases
+    logging: *logging
+  # ######################################################################################
+
+volumes:
+  vaultwarden-data-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_PASSWORD_MANAGEMENT_DIR}/vaultwarden/data
+  # ######################################################################################
