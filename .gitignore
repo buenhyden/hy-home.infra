@@ -1,8 +1,7 @@
 .history/
 Infisical Emergency Kit.pdf
 .vscode/
-.env
-.env.example
+Docker/.env
 _Builds/
 _Tool-Settings/
 _Roadmaps/
@@ -10,6 +9,7 @@ _Example/
 hosts.txt
 Setting_Database.txt
 Certs/
+_Archive/.env
 _Archive/automatisch/.env.huginn
 _Archive/Automation/.env.huginn
 _Archive/Wiki/.env.outline

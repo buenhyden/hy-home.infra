@@ -10,15 +10,78 @@ networks:
     external: true # 이미 존재하는 docker 네트워크(이름: kind)에 부착
 
 volumes:
-  grafana_data: {}
-  prometheus_data: {}
-  loki_data: {}
-  tempo_data: {}
-  minio_data: {}
-  pg_data: {}
-  es_data: {}
-  kafka_data: {}
-  redis_data: {}
+  grafana_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_GRAFANA_DATA_DIR}
+  prometheus_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_PROMETHEUS_DATA_DIR}
+  loki_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_LOKI_DATA_DIR}
+  tempo_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TEMPO_DATA_DIR}
+  minio_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_MINIO_DATA_DIR}
+  pg_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_POSTGRESQL_DATA_DIR}
+  es_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_ELASTICSEARCH_DATA_DIR}
+  kafka_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_KAFKA_DATA_DIR}
+  redis_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}
+  traefik_certs_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TRAEFIK_DIR}/certs
+  traefik_dynamic_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_TRAEFIK_DIR}/dynamic
+  prometheus_config_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CONFIG_DIR}/prometheus
 
 services:
   traefik:
@@ -30,39 +93,49 @@ services:
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--providers.file.watch=true"
     volumes:
-      - ./traefik/dynamic:/etc/traefik/dynamic
-      - ./traefik/certs:/etc/traefik/certs
-    ports: ["80:80", "443:443", "8080:8080"] # 8080 대시보드
-    networks: ["infra_net", "kind"]
+      - traefik_dynamic_data:/etc/traefik/dynamic
+      - traefik_certs_data:/etc/traefik/certs
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # 8080 대시보드
+    networks:
+      - "infra_net"
 
   grafana:
     image: grafana/grafana:11.2.0
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes: ["grafana_data:/var/lib/grafana"]
-    ports: ["3000:3000"]
-    networks: ["infra_net"]
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - ${GRAFANA_HOST_PORT}:${GRAFANA_PORT}
+    networks:
+      - "infra_net"
 
   prometheus:
     image: prom/prometheus:v2.55.0
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_config_data:/etc/prometheus:ro
       - ${HOME}/.kube/config:/kubeconfig:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    ports: ["9090:9090"]
-    networks: ["infra_net"]
+    ports:
+      - ${PROMETHEUS_HOST_PORT}:${PROMETHEUS_PORT}
+    networks:
+      - "infra_net"
 
   alloy:
     image: grafana/alloy:latest
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
     ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-    networks: ["infra_net"]
+      - ${ALLOY_OTLP_GRPC_HOST_PORT}:${ALLOY_OTLP_GRPC_PORT} # OTLP gRPC
+      - ${ALLOY_OTLP_HTTP_HOST_PORT}:${ALLOY_OTLP_HTTP_PORT} # OTLP HTTP
+    networks:
+      - "infra_net"
 
   loki:
     image: grafana/loki:3.0.0
@@ -70,8 +143,10 @@ services:
     volumes:
       - ./loki/config.yml:/etc/loki/config.yml:ro
       - loki_data:/data
-    ports: ["3100:3100"]
-    networks: ["infra_net"]
+    ports:
+      - ${LOKI_HOST_PORT}:${LOKI_PORT}
+    networks:
+      - "infra_net"
 
   tempo:
     image: grafana/tempo:2.6.0
@@ -79,51 +154,68 @@ services:
     volumes:
       - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
       - tempo_data:/var/tempo
-    ports: ["3200:3200", "4317:14317", "4318:14318"]
-    networks: ["infra_net"]
+    ports:
+      - "3200:3200"
+      - "4317:14317"
+      - "4318:14318"
+    networks:
+      - "infra_net"
 
   minio:
     image: minio/minio:RELEASE.2025-09-...
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     environment:
-      - MINIO_ROOT_USER=MINIO_ADMIN
-      - MINIO_ROOT_PASSWORD=ChangeMe_Long!
-    volumes: ["minio_data:/data"]
-    ports: ["9000:9000", "9001:9001"]
-    networks: ["infra_net"]
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - "minio_data:/data"
+    ports:
+      - ${MINIO_HOST_PORT}:${MINIO_PORT}
+      - ${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}
+    networks:
+      - "infra_net"
 
   postgres:
     image: bitnami/postgresql:17
     environment:
-      - POSTGRES_PASSWORD=ChangeMe_Long!
-      - POSTGRES_DB=app
-      - POSTGRES_USER=app
-    volumes: ["pg_data:/bitnami/postgresql"]
-    ports: ["5432:5432"]
-    networks: ["infra_net"]
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+      - POSTGRES_USER=${POSTGRES_ROOT_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_ROOT_PASSWORD}
+    volumes:
+      - "pg_data:/bitnami/postgresql"
+    ports:
+      - ${POSTGRES_HOST_PORT}:${POSTGRES_PORT}
+    networks:
+      - "infra_net"
 
   redis:
     image: bitnami/redis:7.2
     environment:
       - ALLOW_EMPTY_PASSWORD=no
-      - REDIS_PASSWORD=ChangeMe_Long!
-    volumes: ["redis_data:/bitnami/redis"]
-    ports: ["6379:6379"]
-    networks: ["infra_net"]
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - "redis_data:/bitnami/redis"
+    ports:
+      - ${REDIS_HOST_PORT}:${REDIS_PORT}
+    networks:
+      - "infra_net"
 
   kafka:
     image: bitnami/kafka:3.7
     environment:
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
       - KAFKA_CFG_NODE_ID=1
-      - KAFKA_KRAFT_CLUSTER_ID=9h2k8J60QLOyN7zO6C5x1g # 예시
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_KRAFT_CLUSTER_ID=${KAFKA_CLSUTER_ID} # 예시
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_PORT},CONTROLLER://:${KAFKA_CONTROLLER_PORT}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:${KAFKA_PORT}
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-    volumes: ["kafka_data:/bitnami/kafka"]
-    ports: ["9092:9092"]
-    networks: ["infra_net"]
+    volumes:
+      - "kafka_data:/bitnami/kafka"
+    ports:
+      - ${KAFKA_HOST_PORT}:${KAFKA_PORT}
+    networks:
+      - "infra_net"
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
@@ -131,13 +223,18 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
-    volumes: ["es_data:/usr/share/elasticsearch/data"]
-    ports: ["9200:9200"]
-    networks: ["infra_net"]
+    volumes:
+      - "es_data:/usr/share/elasticsearch/data"
+    ports:
+      - ${ES_HOST_PORT}:${ES_PORT}
+    networks:
+      - "infra_net"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.0
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports: ["5601:5601"]
-    networks: ["infra_net"]
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:${ES_PORT}
+    ports:
+      - ${KIBANA_HOST_PORT}:${KIBANA_PORT}
+    networks:
+      - "infra_net"
