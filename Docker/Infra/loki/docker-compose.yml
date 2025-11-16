@@ -1,0 +1,22 @@
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+      - "${LOKI_HOST_PORT}:${LOKI_PORT}" # API
+    networks:
+      - infra_net
+    volumes:
+      # 이 파일은 3번 섹션에서 생성합니다.
+      - loki-conf-volume:/etc/loki:ro
+    depends_on:
+      minio: { condition: service_healthy }
+
+volumes:
+  loki-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CONFIG_DIR}/loki

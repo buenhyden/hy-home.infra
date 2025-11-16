@@ -1,0 +1,23 @@
+# infra/tracing/tempo-values.yaml
+tempo:
+  storage:
+    trace:
+      backend: s3
+      s3:
+        endpoint: minio:9000
+        bucket: tempo
+        access_key: "TEMPO_ACCESS_KEY"     # Secret
+        secret_key: "TEMPO_SECRET_KEY"     # Secret
+        insecure: true
+
+  search:
+    enabled: true
+
+distributor:
+  replicas: 2
+ingester:
+  replicas: 2
+querier:
+  replicas: 2
+queryFrontend:
+  replicas: 2

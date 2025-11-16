@@ -1,0 +1,119 @@
+x-logging-loki: &logging-loki
+  driver: loki
+  options:
+    loki-url: "http:/loki:3100/loki/api/v1/push"
+
+services:
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.80.0
+    container_name: redis-exporter
+    ports:
+      - "${REDIS_EXPORTER_HOST_PORT}:${REDIS_EXPORTER_PORT}"
+    networks:
+      - infra_net
+    command:
+      # 6개의 모든 노드 주소
+      - --redis.addr=redis://redis-1:6379,redis://redis-2:6379,redis://redis-3:6379,redis://redis-4:6379,redis://redis-5:6379,redis://redis-6:6379
+      - --redis.password=${REDIS_PASSWORD}
+    depends_on: # healthcheck를 사용하므로 condition으로 변경 (더 안정적)
+      redis-1: { condition: service_healthy }
+      redis-2: { condition: service_healthy }
+      redis-3: { condition: service_healthy }
+      redis-4: { condition: service_healthy }
+      redis-5: { condition: service_healthy }
+      redis-6: { condition: service_healthy }
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    networks:
+      - infra_net
+    ports:
+      - "${REDIS_INSIGHT_HOST_PORT}:${REDIS_INSIGHT_PORT}" # 호스트에서 GUI 웹페이지에 접근할 포트
+    volumes:
+      - redisinsight_data:/db
+
+  redis-base: &redis-cluster-node
+    image: redis:7.4.0-alpine
+    command: >
+      redis-server --port ${REDIS_PORT} --cluster-enabled yes
+      --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly
+      yes --requirepass ${REDIS_PASSWORD} --masterauth ${REDIS_PASSWORD}
+    expose:
+      - "${REDIS_PORT}" # [수정] ports 대신 expose 사용
+    networks:
+      - infra_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis-1:
+    <<: *redis-cluster-node
+    container_name: redis-1
+    volumes: [redis_data_1:/data]
+  redis-2:
+    <<: *redis-cluster-node
+    container_name: redis-2
+    volumes: [redis_data_2:/data]
+  redis-3:
+    <<: *redis-cluster-node
+    container_name: redis-3
+    volumes: [redis_data_3:/data]
+  redis-4:
+    <<: *redis-cluster-node
+    container_name: redis-4
+    volumes: [redis_data_4:/data]
+  redis-5:
+    <<: *redis-cluster-node
+    container_name: redis-5
+    volumes: [redis_data_5:/data]
+  redis-6:
+    <<: *redis-cluster-node
+    container_name: redis-6
+    volumes: [redis_data_6:/data]
+
+volumes:
+  redisinsight_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/redisinsight
+  redis_data_1:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node1
+  redis_data_2:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node2
+  redis_data_3:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node3
+  redis_data_4:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node4
+  redis_data_5:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node5
+  redis_data_6:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node6

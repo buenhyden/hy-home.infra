@@ -1,0 +1,24 @@
+services:
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: tempo
+    command: -config.file=/etc/tempo/config.yaml
+    ports:
+      - "${TEMPO_UI_HOST_PORT}:${TEMPO_UI_PORT}" # Tempo UI (Grafana에서 사용)
+      - "${ALLOY_OTLP_GRPC_HOST_PORT}:${ALLOY_OTLP_GRPC_PORT}" # OTLP gRPC (Alloy가 보낼 엔드포인트)
+      - "${ALLOY_OTLP_HTTP_HOST_PORT}:${ALLOY_OTLP_HTTP_PORT}" # OTLP HTTP
+    networks:
+      - infra_net
+    volumes:
+      # 이 파일은 4번 섹션에서 생성합니다.
+      - tempo-conf-volume:/etc/tempo:ro
+    depends_on:
+      minio: { condition: service_healthy }
+
+volumes:
+  tempo-conf-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_CONFIG_DIR}/tempo

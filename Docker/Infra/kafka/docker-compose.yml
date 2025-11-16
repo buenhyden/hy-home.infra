@@ -1,0 +1,105 @@
+services:
+  # -------------------------------------------
+  # 1. Kafka KRaft Cluster (3 Nodes)
+  # -------------------------------------------
+  kafka-controller-1:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka-controller-1
+    env_file:
+      - .env.kafka1
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_CONTROLLER_1_HOST_PORT}:${KAFKA_CONTROLLER_1_PORT}"
+
+  kafka-controller-2:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka-controller-2
+    env_file:
+      - .env.kafka2
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_CONTROLLER_2_HOST_PORT}:${KAFKA_CONTROLLER_2_PORT}"
+
+  kafka-controller-3:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka-controller-3
+    env_file:
+      - .env.kafka3
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_CONTROLLER_3_HOST_PORT}:${KAFKA_CONTROLLER_3_PORT}"
+
+  # -------------------------------------------
+  # 2. Schema Registry (스키마 레지스트리)
+  # -------------------------------------------
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: schema-registry
+    env_file:
+      - .env.schema-registry
+    networks:
+      - infra_net
+    ports:
+      - "${SCHEMA_REGISTRY_HOST_PORT}:${SCHEMA_REGISTRY_PORT}"
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+
+  # -------------------------------------------
+  # 3. Kafka Connect (카프카 커넥트)
+  # -------------------------------------------
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.6.0
+    container_name: kafka-connect
+    env_file:
+      - .env.kafka-connect
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_CONNECT_HOST_PORT}:${KAFKA_CONNECT_PORT}"
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+      - schema-registry
+
+  # -------------------------------------------
+  # 4. Kafka REST Proxy (레스트 프록시)
+  # -------------------------------------------
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.6.0
+    container_name: kafka-rest-proxy
+    env_file:
+      - .env.kafka-rest-proxy
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_REST_PROXY_HOST_PORT}:${KAFKA_REST_PROXY_PORT}" # Host -> Container
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+      - schema-registry
+
+  # -------------------------------------------
+  # 5. Kafka UI (카프카 UI - Provectus)
+  # -------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    env_file:
+      - .env.kafka-ui
+    networks:
+      - infra_net
+    ports:
+      - "${KAFKA_UI_HOST_PORT}:${KAFKA_UI_PORT}" # Host -> Container
+    depends_on:
+      - kafka-controller-1
+      - kafka-controller-2
+      - kafka-controller-3
+      - schema-registry
+      - kafka-connect

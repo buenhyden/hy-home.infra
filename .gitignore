@@ -1,8 +1,12 @@
 .history/
 Infisical Emergency Kit.pdf
 .vscode/
-Docker_Compose/Docker_Files/.env
-Docker_Compose/Docker_Files/.env.supabase
+Docker/.env
+Docker/Infra/**/.env
+Docker/Infra/**/.env.*
+Docker/Projects/**/.env
+Docker/Projects/**/.ssh
+Kubernetes/.env
 _Tool-Settings/
 _Roadmaps/
 _Example/
@@ -21,6 +25,3 @@ _Archive/etc/.env.vaultwarden
 _Archive/Incident-Management/.env.dispatch
 _Archive/Notification/.env.novu
 _Docs/클라우드_취약점_점검_가이드.pdf
-Projects/.env
-Projects/.env.example
-Projects/**/.ssh

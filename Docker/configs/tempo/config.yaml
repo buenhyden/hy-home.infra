@@ -1,0 +1,26 @@
+# ./config/tempo-config.yaml
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317 # Alloy (Kind) -> Tempo (Docker) OTLP gRPC
+        http:
+          endpoint: 0.0.0.0:4318 # Alloy (Kind) -> Tempo (Docker) OTLP HTTP
+
+storage:
+  trace:
+    backend: s3
+    force_path_style: true # MinIO 사용 시 필수
+    s3:
+      bucket: tempo
+      endpoint: minio:9000
+      access_key: ${MINIO_ROOT_USER}
+      secret_key: ${MINIO_ROOT_PASSWORD}
+      insecure: true # http 사용
+
+query_frontend:
+  search_lookback_period: 168h # 7일

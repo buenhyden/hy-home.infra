@@ -1,0 +1,14 @@
+# infra/istio/istiod-values.yaml
+meshConfig:
+  accessLogFile: /dev/stdout
+  defaultConfig:
+    tracing:
+      sampling: 10
+  enablePrometheusMerge: true
+
+global:
+  proxy:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
