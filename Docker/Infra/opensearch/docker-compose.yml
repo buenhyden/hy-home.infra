@@ -22,6 +22,10 @@ services:
       - node.roles=cluster_manager,data,ingest,remote_cluster_client
       # 2.12+ 기준 보안 데모 구성에서 admin 패스워드 설정 (env 파일에서 가져옴)
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${ELASTIC_PASSWORD}
+      - "plugins.metrics.enabled=true"
+      - "plugins.metrics.prometheus.enabled=true"
+      - "plugins.metrics.prometheus.exporter.port=9600"
+      - "plugins.metrics.prometheus.exporter.use_insecure=true"
     ulimits:
       # 스왑 방지를 위해 memlock 무제한
       memlock:
@@ -65,6 +69,10 @@ services:
       - node.roles=cluster_manager,data,ingest,remote_cluster_client
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${ELASTIC_PASSWORD}
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      - "plugins.metrics.enabled=true"
+      - "plugins.metrics.prometheus.enabled=true"
+      - "plugins.metrics.prometheus.exporter.port=9600"
+      - "plugins.metrics.prometheus.exporter.use_insecure=true"
     ulimits:
       memlock:
         soft: -1
@@ -102,6 +110,10 @@ services:
       - node.roles=cluster_manager,data,ingest,remote_cluster_client
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${ELASTIC_PASSWORD}
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      - "plugins.metrics.enabled=true"
+      - "plugins.metrics.prometheus.enabled=true"
+      - "plugins.metrics.prometheus.exporter.port=9600"
+      - "plugins.metrics.prometheus.exporter.use_insecure=true"
     ulimits:
       memlock:
         soft: -1

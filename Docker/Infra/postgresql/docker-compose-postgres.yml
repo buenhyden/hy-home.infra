@@ -255,3 +255,17 @@ services:
     networks:
       - infra_net
     restart: unless-stopped
+    labels:
+      org.hy.home.telemetry: "enabled"
+      org.hy.home.stack: "postgres"
+      org.hy.home.role: "exporter"
+      org.hy.home.env: "dev"
+      org.hy.home.logs.enabled: "true"
+      org.hy.home.metrics.enabled: "true"
+      org.hy.home.metrics.port: "${POSTGRES_EXPORTER_PORT}"
+      org.hy.home.metrics.path: "/metrics"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${POSTGRES_EXPORTER_PORT:-9187}/metrics > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5

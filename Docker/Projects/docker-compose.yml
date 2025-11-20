@@ -25,6 +25,12 @@ include:
   - FastAPI/docker-compose.yml
 
 volumes:
+  reactjs-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_SOURCECODE_DIR}/ReactJS
   django-volume:
     driver: local
     driver_opts:

@@ -76,7 +76,7 @@ CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
 # "dev-deps" 스테이지(모든 의존성 포함)에서 시작
 FROM dev-deps AS dev
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates default-libmysqlclient-dev git git-flow \
+    && apt-get install -y --no-install-recommends ca-certificates default-libmysqlclient-dev git git-flow wget procps \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean 
 # Copy the application source code

@@ -9,7 +9,7 @@ services:
     ports:
       - "${KAFKA_CONTROLLER_1_HOST_PORT}:${KAFKA_CONTROLLER_PORT}"
     environment:
-      # --- KRaft 공통 ---
+      # --- KRaft 공통 ---      
       # 클러스터 ID (3개 브로커 모두 동일해야 함)
       CLUSTER_ID: ${KAFKA_CLSUTER_ID}
       # 이 노드의 고유 ID (브로커/컨트롤러 구분)
@@ -33,17 +33,13 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 2
-
       # 자동 토픽 생성 (개발용 편의)
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
       # 로그 디렉터리
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
-
       # 다양한 운영 기본값들
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
       # JVM 옵션 (필요하면 조절)
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
 
@@ -284,6 +280,26 @@ services:
       - kafka-3
       - schema-registry
       - kafka-connect
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    container_name: kafka-exporter
+    restart: unless-stopped
+    environment:
+      KAFKA_SERVER: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+    ports:
+      - "${KAFKA_EXPORTER_HOST_PORT}:${KAFKA_EXPORTER_PORT}"
+    networks:
+      - infra_net
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
     logging:
       driver: "json-file"
       options:
