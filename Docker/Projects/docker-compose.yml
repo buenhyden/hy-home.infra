@@ -1,0 +1,39 @@
+networks:
+  infra_net:
+    external: true
+  project_net:
+    name: project_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  kind:
+    external: true # 이미 존재하는 docker 네트워크(이름: kind)에 부착
+
+secrets:
+  postgres_password:
+    file: ../secrets/postgres_password.txt
+  redis_password:
+    file: ../secrets/redis_password.txt
+  minio_root_password:
+    file: ../secrets/minio_root_password.txt
+  minio_root_user:
+    file: ../secrets/minio_root_user.txt
+
+include:
+  - Django/docker-compose.yml
+  - FastAPI/docker-compose.yml
+
+volumes:
+  django-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_SOURCECODE_DIR}/Django
+  fastapi-volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_SOURCECODE_DIR}/FastAPI

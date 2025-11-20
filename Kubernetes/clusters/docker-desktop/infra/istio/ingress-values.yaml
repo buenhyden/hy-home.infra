@@ -1,5 +1,0 @@
-# infra/istio/ingress-values.yaml
-service:
-  type: LoadBalancer
-  annotations:
-    metallb.universe.tf/address-pool: default

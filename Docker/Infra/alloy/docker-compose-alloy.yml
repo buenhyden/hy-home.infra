@@ -1,0 +1,20 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.5.0
+    container_name: alloy
+    restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro # 도커 로그 접근
+      - /var/run/docker.sock:/var/run/docker.sock:ro # 도커 메타데이터 접근
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+      - "4317:4317" # OTLP gRPC Receiver
+      - "4318:4318" # OTLP HTTP Receiver
+    networks:
+      - infra_net # 내부 메트릭 수집용
+      - kind      # Kind로 데이터 전송용
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

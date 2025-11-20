@@ -82,7 +82,8 @@ RUN apt-get update \
 # Copy the application source code
 # This is useful for VS Code devcontainers or if not using volume mounts
 RUN mkdir /app/scripts/
-COPY ./src ./src
+COPY .github/ ./.github/
+COPY deploy/ ./deploy/
 COPY ./README.md ./README.md
 COPY ./.gitignore ./
 COPY ./.dockerignore ./

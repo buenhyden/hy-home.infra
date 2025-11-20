@@ -1,0 +1,32 @@
+// 1. Docker 로그 수집
+discovery.docker "linux" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.linux.targets
+  forward_to = [loki.write.kind_loki.receiver]
+}
+
+// 2. 인프라 메트릭 수집 (Scrape)
+prometheus.scrape "infra_metrics" {
+  targets = [
+    {__address__ = "postgres-exporter:9187", service = "postgres"},
+    {__address__ = "redis-exporter:9121", service = "redis"},
+  ]
+  forward_to = [prometheus.remote_write.kind_prom.receiver]
+}
+
+// 3. Kind로 데이터 전송 (Output) -> IP 수정 필수!
+loki.write "kind_loki" {
+  endpoint {
+    url = "http://172.18.255.201:80/loki/api/v1/push" 
+  }
+}
+
+prometheus.remote_write "kind_prom" {
+  endpoint {
+    url = "http://172.18.255.203:9090/api/v1/write" 
+  }
+}

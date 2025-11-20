@@ -10,7 +10,7 @@ version: "3.8"
 services:
   supabase-studio:
     env_file:
-      - .env
+      - ./.env.supabase
     container_name: supabase-studio
     hostname: supabase-studio
     image: supabase/studio:20240701-05dfbec
@@ -21,8 +21,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "require('http').get('http://localhost:${SUPABASE_STUDIO_PORT}/api/profile',
-          (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})",
+          "require('http').get('http://localhost:${SUPABASE_STUDIO_PORT}/api/profile', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})",
         ]
       timeout: 5s
       interval: 5s
@@ -62,9 +61,7 @@ services:
     image: kong:2.8.1
     restart: unless-stopped
     # https://unix.stackexchange.com/a/294837
-    entrypoint:
-      bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml &&
-      /docker-entrypoint.sh kong docker-start'
+    entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
     ports:
       - ${KONG_HTTP_PORT}:${SUPABASE_KONG_HTTP_PORT}/tcp
       - ${KONG_HTTPS_PORT}:${SUPABASE_KONG_HTTPS_PORT}/tcp

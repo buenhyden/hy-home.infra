@@ -1,0 +1,193 @@
+networks:
+  infra_net:
+    name: infra_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+  project_net:
+    external: true
+  kind:
+    external: true
+
+secrets:
+  postgres_password:
+    file: ../secrets/postgres_password.txt
+  redis_password:
+    file: ../secrets/redis_password.txt
+  minio_root_password:
+    file: ../secrets/minio_root_password.txt
+  minio_root_user:
+    file: ../secrets/minio_root_user.txt
+
+include:
+  - alloy/docker-compose.yml
+  - redis-cluster/docker-compose.yml
+  - opensearch/docker-compose.yml
+  - minio/docker-compose.yml
+  - kafka/docker-compose.yml
+  - postgresql/docker-compose.yml
+
+  # - wikijs/docker-compose.yml
+  # - airflow/docker-compose.yml
+  # - loki/docker-compose.yml
+  # - tempo/docker-compose.yml
+  #- elasticsearch/docker-compose.yml
+
+volumes:
+  pg0-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_POSTGRESQL_DATA_DIR}/pg0
+  pg1-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_POSTGRESQL_DATA_DIR}/pg1
+  pg2-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_POSTGRESQL_DATA_DIR}/pg2
+  redisinsight-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/redisinsight
+  redis-data-0:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node0
+  redis-data-1:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node1
+  redis-data-2:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node2
+  redis-data-3:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node3
+  redis-data-4:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node4
+  redis-data-5:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/node5
+  minio-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_MINIO_DATA_DIR}/data
+  opensearch-data1:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OPENSEARCH_DATA_DIR}/node1
+  opensearch-data2:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OPENSEARCH_DATA_DIR}/node2
+  opensearch-data3:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OPENSEARCH_DATA_DIR}/node3
+  es_snapshots:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_OPENSEARCH_DATA_DIR}/snapshots
+  kafka-1-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_KAFKA_DATA_DIR}/node1
+  kafka-2-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_KAFKA_DATA_DIR}/node2
+  kafka-3-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_KAFKA_DATA_DIR}/node3
+  kafka-connect-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_KAFKA_DATA_DIR}/kafka-connect
+  airflow-dags:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/dags
+  airflow-logs:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/logs
+  airflow-config:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/config
+  airflow-plugins:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/plugins
+  etcd1-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_ETCD_DATA_DIR}/etcd1
+  etcd2-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_ETCD_DATA_DIR}/etcd2
+  etcd3-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_ETCD_DATA_DIR}/etcd3

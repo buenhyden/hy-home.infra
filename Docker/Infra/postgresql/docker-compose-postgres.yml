@@ -1,0 +1,257 @@
+services:
+  ###############################################################
+  # etcd 3노드 (Patroni DCS)
+  ###############################################################
+  etcd-1:
+    image: quay.io/coreos/etcd:v3.5.15
+    container_name: etcd-1
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd-1
+      - --data-dir=/etcd-data
+      - --initial-advertise-peer-urls=http://etcd-1:${ETCD_PEER_PORT}
+      - --listen-peer-urls=http://0.0.0.0:${ETCD_PEER_PORT}
+      - --listen-client-urls=http://0.0.0.0:${ETCD_CLIENT_PORT}
+      - --advertise-client-urls=http://etcd-1:${ETCD_CLIENT_PORT}
+      - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
+      - --initial-cluster-state=new
+      - --initial-cluster-token=pg-ha-etcd
+      - --enable-v2=true        
+    volumes:
+      - etcd1-data:/etcd-data
+    expose:
+      - ${ETCD_CLIENT_PORT}
+    networks:
+      - infra_net
+    restart: unless-stopped
+
+  etcd-2:
+    image: quay.io/coreos/etcd:v3.5.15
+    container_name: etcd-2
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd-2
+      - --data-dir=/etcd-data
+      - --initial-advertise-peer-urls=http://etcd-2:${ETCD_PEER_PORT}
+      - --listen-peer-urls=http://0.0.0.0:${ETCD_PEER_PORT}
+      - --listen-client-urls=http://0.0.0.0:${ETCD_CLIENT_PORT}
+      - --advertise-client-urls=http://etcd-2:${ETCD_CLIENT_PORT}
+      - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
+      - --initial-cluster-state=new
+      - --initial-cluster-token=pg-ha-etcd
+      - --enable-v2=true        
+    volumes:
+      - etcd2-data:/etcd-data
+    expose:
+      - ${ETCD_CLIENT_PORT}
+    networks:
+      - infra_net
+    restart: unless-stopped
+
+  etcd-3:
+    image: quay.io/coreos/etcd:v3.5.15
+    container_name: etcd-3
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd-3
+      - --data-dir=/etcd-data
+      - --initial-advertise-peer-urls=http://etcd-3:${ETCD_PEER_PORT}
+      - --listen-peer-urls=http://0.0.0.0:${ETCD_PEER_PORT}
+      - --listen-client-urls=http://0.0.0.0:${ETCD_CLIENT_PORT}
+      - --advertise-client-urls=http://etcd-3:${ETCD_CLIENT_PORT}
+      - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
+      - --initial-cluster-state=new
+      - --initial-cluster-token=pg-ha-etcd
+      - --enable-v2=true        
+    volumes:
+      - etcd3-data:/etcd-data
+    expose:
+      - ${ETCD_CLIENT_PORT}
+    networks:
+      - infra_net
+    restart: unless-stopped
+
+  ###############################################################
+  # Patroni + PostgreSQL 17 노드 3개
+  ###############################################################
+  pg-0:
+    image: ghcr.io/zalando/spilo-17:4.0-p3
+    container_name: pg-0
+    hostname: pg-0
+    env_file:
+      - .env.postgres
+    environment:      
+      SCOPE: "pg-ha"
+      # etcd 클러스터 주소
+      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+      # 계정 비밀번호 (Spilo가 initdb 시 사용)
+      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
+      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      # --------------------------------------------------------------------
+      # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
+      # --------------------------------------------------------------------
+      PATRONI_NAME: pg-0
+      PATRONI_NAMESPACE: /service/
+      # 네트워크 바인딩 (이 설정은 유지)
+      # REST API
+      PATRONI_RESTAPI_LISTEN: 0.0.0.0:${PATRONI_RESTAPI_PORT}
+      PATRONI_RESTAPI_CONNECT_ADDRESS: pg-0:${PATRONI_RESTAPI_PORT}
+      # PostgreSQL listen / connect
+      PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-0:${POSTGRES_PORT}
+      
+      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
+      PATRONI_POSTGRESQL_PGHBA: |
+        # 로컬 소켓
+        local   all             all                                     trust
+        # 로컬 루프백
+        host    all             all             127.0.0.1/32            trust
+        host    all             all             ::1/128                 trust
+        # Docker 브리지/infra_net에서의 일반 접근 (비밀번호 필수)
+        host    all             all             0.0.0.0/0               md5
+        host    replication     all             0.0.0.0/0               md5
+    volumes:
+      - pg0-data:/home/postgres/pgdata
+    expose:
+      - ${POSTGRES_PORT}
+    networks:
+      - infra_net
+    depends_on:
+      - etcd-1
+      - etcd-2
+      - etcd-3
+    restart: unless-stopped
+
+  pg-1:
+    image: ghcr.io/zalando/spilo-17:4.0-p3
+    container_name: pg-1
+    hostname: pg-1
+    env_file:
+      - .env.postgres
+    environment:      
+      SCOPE: "pg-ha"
+      # etcd 클러스터 주소
+      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+      # 계정 비밀번호 (Spilo가 initdb 시 사용)
+      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
+      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      # --------------------------------------------------------------------
+      # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
+      # --------------------------------------------------------------------
+      PATRONI_NAME: pg-1
+      PATRONI_NAMESPACE: /service/
+      # 네트워크 바인딩 (이 설정은 유지)
+      # REST API
+      PATRONI_RESTAPI_LISTEN: 0.0.0.0:${PATRONI_RESTAPI_PORT}
+      PATRONI_RESTAPI_CONNECT_ADDRESS: pg-1:${PATRONI_RESTAPI_PORT}
+      # PostgreSQL listen / connect
+      PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-1:${POSTGRES_PORT}
+      
+      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
+      PATRONI_POSTGRESQL_PGHBA: |
+        # 로컬 소켓
+        local   all             all                                     trust
+        # 로컬 루프백
+        host    all             all             127.0.0.1/32            trust
+        host    all             all             ::1/128                 trust
+        # Docker 브리지/infra_net에서의 일반 접근 (비밀번호 필수)
+        host    all             all             0.0.0.0/0               md5
+        host    replication     all             0.0.0.0/0               md5
+    volumes:
+      - pg1-data:/home/postgres/pgdata
+    networks:
+      - infra_net
+    expose:
+      - ${POSTGRES_PORT}
+    depends_on:
+      - etcd-1
+      - etcd-2
+      - etcd-3
+    restart: unless-stopped
+
+  pg-2:
+    image: ghcr.io/zalando/spilo-17:4.0-p3
+    container_name: pg-2
+    hostname: pg-2
+    env_file:
+      - .env.postgres
+    environment:      
+      SCOPE: "pg-ha"
+      # etcd 클러스터 주소
+      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+      # 계정 비밀번호 (Spilo가 initdb 시 사용)
+      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
+      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      # --------------------------------------------------------------------
+      # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
+      # --------------------------------------------------------------------
+      PATRONI_NAME: pg-2
+      PATRONI_NAMESPACE: /service/
+      # 네트워크 바인딩 (이 설정은 유지)
+      # REST API
+      PATRONI_RESTAPI_LISTEN: 0.0.0.0:${PATRONI_RESTAPI_PORT}
+      PATRONI_RESTAPI_CONNECT_ADDRESS: pg-2:${PATRONI_RESTAPI_PORT}
+      # PostgreSQL listen / connect
+      PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-2:${POSTGRES_PORT}
+      
+      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
+      PATRONI_POSTGRESQL_PGHBA: |
+        # 로컬 소켓
+        local   all             all                                     trust
+        # 로컬 루프백
+        host    all             all             127.0.0.1/32            trust
+        host    all             all             ::1/128                 trust
+        # Docker 브리지/infra_net에서의 일반 접근 (비밀번호 필수)
+        host    all             all             0.0.0.0/0               md5
+        host    replication     all             0.0.0.0/0               md5
+    volumes:
+      - pg2-data:/home/postgres/pgdata
+    networks:
+      - infra_net
+    expose:
+      - ${POSTGRES_PORT}
+    depends_on:
+      - etcd-1
+      - etcd-2
+      - etcd-3
+    restart: unless-stopped
+
+  ###############################################################
+  # HAProxy 라우터 (Writer/Reader 분리)
+  ###############################################################
+  pg-router:
+    image: haproxy:2.9
+    container_name: pg-router
+    env_file:
+      - .env.postgres_exporter
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "${POSTGRES_WRITE_HOST_PORT}:${POSTGRES_WRITE_PORT}" # Write endpoint
+      - "${POSTGRES_READ_HOST_PORT}:${POSTGRES_READ_PORT}" # Read endpoint
+      - "${HAPROXY_HOST_PORT}:${HAPROXY_PORT}" # Stats (옵션)
+    networks:
+      - infra_net
+    depends_on:
+      - pg-0
+      - pg-1
+      - pg-2
+    restart: unless-stopped
+
+  ###############################################################
+  # postgres-exporter (Prometheus / Alloy용 메트릭)
+  ###############################################################
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter
+    env_file:
+      - .env.postgres_exporter
+    ports:
+      - "${POSTGRES_EXPORTER_HOST_PORT}:${POSTGRES_EXPORTER_PORT}"
+    depends_on:
+      - pg-router
+    networks:
+      - infra_net
+    restart: unless-stopped

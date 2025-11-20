@@ -1,40 +1,29 @@
 networks:
   infra_net:
+    name: infra_net
     driver: bridge
     ipam:
       config:
         - subnet: 172.19.0.0/16
   project_net:
+    name: project_net
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
   kind:
     external: true # 이미 존재하는 docker 네트워크(이름: kind)에 부착
 
-include:
-  # - Projects/Django/docker-compose.yml
-  # - Projects/FastAPI/docker-compose.yml
-  - Infra/cadvisor/docker-compose.yml
-  - Infra/minio/docker-compose.yml
-  - Infra/redis-cluster/docker-compose.yml
-  - Infra/postgressql/docker-compose.yml
-  - Infra/opensearch/docker-compose.yml
-  - Infra/kafka/docker-compose.yml
-  #- Infra/elasticsearch/docker-compose.yml
-  # - Infra/loki/docker-compose.yml
-  # - Infra/tempo/docker-compose.yml
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  minio_root_password:
+    file: ./secrets/minio_root_password.txt
+  minio_root_user:
+    file: ./secrets/minio_root_user.txt
 
-  #- Docker_Files/docker-airflow.yml
-  #- Docker_Files/docker-wiki.js.yml
-  #- Docker_Files/docker-n8n.yml
-  #- Docker_Files/docker-harbor.yml
-  #- Docker_Files/docker-keycloak.yml
-  #- Docker_Files/docker-influxdb.yml
-  #- Docker_Files/docker-ksql.yml
-  #- Docker_Files/docker-locust.yml
-  #- Docker_Files/docker-loki.yml
-  #- Docker_Files/docker-monogodb.yml
-  #- Docker_Files/docker-Ollama.yml
-  #- Docker_Files/docker-prometheus.yml
-  #- Docker_Files/docker-sonarqube.yml
-  #- Docker_Files/docker-supabase.yml
-  #- Docker_Files/docker-tempo.yml
-  #- Docker_Files/docker-traefik.yml
+include:
+  - Infra/docker-compose.yml
+  - Projects/docker-compose.yml
