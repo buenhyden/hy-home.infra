@@ -28,6 +28,8 @@ include:
   - opensearch/docker-compose.yml
   - redis-cluster/docker-compose.yml  
   - postgresql/docker-compose.yml  
+  - n8n/docker-compose.yml
+  - ollama/docker-compose.yml
   # - wikijs/docker-compose.yml
   # - airflow/docker-compose.yml
   # - loki/docker-compose.yml
@@ -35,6 +37,30 @@ include:
   #- elasticsearch/docker-compose.yml
 
 volumes:
+  qdrant-data:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_VECTOR_DB_DIR}/qdrant
+  ollama-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AI_MODEL_DIR}/ollama
+  ollama-webui:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_AI_MODEL_DIR}/webui
+  n8n-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_N8N_DIR}
   tempo-data:
     driver: local
     driver_opts:

@@ -16,7 +16,7 @@ services:
       - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
       - --initial-cluster-state=new
       - --initial-cluster-token=pg-ha-etcd
-      - --enable-v2=true        
+      
     volumes:
       - etcd1-data:/etcd-data
     expose:
@@ -40,7 +40,7 @@ services:
       - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
       - --initial-cluster-state=new
       - --initial-cluster-token=pg-ha-etcd
-      - --enable-v2=true        
+      
     volumes:
       - etcd2-data:/etcd-data
     expose:
@@ -64,7 +64,7 @@ services:
       - --initial-cluster=etcd-1=http://etcd-1:${ETCD_PEER_PORT},etcd-2=http://etcd-2:${ETCD_PEER_PORT},etcd-3=http://etcd-3:${ETCD_PEER_PORT}
       - --initial-cluster-state=new
       - --initial-cluster-token=pg-ha-etcd
-      - --enable-v2=true        
+      
     volumes:
       - etcd3-data:/etcd-data
     expose:
@@ -86,10 +86,7 @@ services:
     environment:      
       SCOPE: "pg-ha"
       # etcd 클러스터 주소
-      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
-      # 계정 비밀번호 (Spilo가 initdb 시 사용)
-      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
-      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      ETCD3_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"      
       # --------------------------------------------------------------------
       # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
       # --------------------------------------------------------------------
@@ -102,17 +99,6 @@ services:
       # PostgreSQL listen / connect
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-0:${POSTGRES_PORT}
-      
-      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
-      PATRONI_POSTGRESQL_PGHBA: |
-        # 로컬 소켓
-        local   all             all                                     trust
-        # 로컬 루프백
-        host    all             all             127.0.0.1/32            trust
-        host    all             all             ::1/128                 trust
-        # Docker 브리지/infra_net에서의 일반 접근 (비밀번호 필수)
-        host    all             all             0.0.0.0/0               md5
-        host    replication     all             0.0.0.0/0               md5
     volumes:
       - pg0-data:/home/postgres/pgdata
     expose:
@@ -135,10 +121,7 @@ services:
     environment:      
       SCOPE: "pg-ha"
       # etcd 클러스터 주소
-      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
-      # 계정 비밀번호 (Spilo가 initdb 시 사용)
-      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
-      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      ETCD3_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"      
       # --------------------------------------------------------------------
       # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
       # --------------------------------------------------------------------
@@ -150,15 +133,7 @@ services:
       PATRONI_RESTAPI_CONNECT_ADDRESS: pg-1:${PATRONI_RESTAPI_PORT}
       # PostgreSQL listen / connect
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
-      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-1:${POSTGRES_PORT}
-      
-      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
-      PATRONI_POSTGRESQL_PGHBA: |        
-        local   all             all                                     trust        
-        host    all             all             127.0.0.1/32            trust
-        host    all             all             ::1/128                 trust        
-        host    all             all             0.0.0.0/0               md5
-        host    replication     all             0.0.0.0/0               md5
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-1:${POSTGRES_PORT}      
     volumes:
       - pg1-data:/home/postgres/pgdata
     networks:
@@ -181,10 +156,8 @@ services:
     environment:      
       SCOPE: "pg-ha"
       # etcd 클러스터 주소
-      ETCD_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
-      # 계정 비밀번호 (Spilo가 initdb 시 사용)
-      PGPASSWORD_SUPERUSER: ${PGPASSWORD_SUPERUSER}  # .env의 PATRONI_SUPERUSER_PASSWORD 값
-      PGPASSWORD_REPLICATION: ${PGPASSWORD_REPLICATION} # .env의 PATRONI_REPLICATION_PASSWORD 값
+      ETCD3_HOSTS: "etcd-1:2379,etcd-2:2379,etcd-3:2379"
+      # 계정 비밀번호 (Spilo가 initdb 시 사용)      
       # --------------------------------------------------------------------
       # 2. Patroni 네이티브 오버라이드 (세부 설정 제어)
       # --------------------------------------------------------------------
@@ -196,15 +169,8 @@ services:
       PATRONI_RESTAPI_CONNECT_ADDRESS: pg-2:${PATRONI_RESTAPI_PORT}
       # PostgreSQL listen / connect
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
-      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-2:${POSTGRES_PORT}
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-2:${POSTGRES_PORT}     
       
-      # ★ pg_hba 설정: HAProxy 포함 모든 컨테이너에서 md5 접속 허용
-      PATRONI_POSTGRESQL_PGHBA: |        
-        local   all             all                                     trust        
-        host    all             all             127.0.0.1/32            trust
-        host    all             all             ::1/128                 trust        
-        host    all             all             0.0.0.0/0               md5
-        host    replication     all             0.0.0.0/0               md5
     volumes:
       - pg2-data:/home/postgres/pgdata
     networks:
@@ -250,6 +216,8 @@ services:
         ipv4_address: 172.19.0.47
     expose:
       - "${POSTGRES_EXPORTER_PORT}"
+    secrets:
+      - postgres_password
     depends_on:
       - pg-0    
     entrypoint: ["/bin/sh", "-c"]
@@ -257,7 +225,7 @@ services:
       - |
         export PGPASSWORD=$(cat /run/secrets/postgres_password | tr -d '\n')
         # pg-0에 직접 접속
-        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-0:5432/postgres?sslmode=disable"
+        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-0:5432/postgres?sslmode=require"
         exec /bin/postgres_exporter
     restart: unless-stopped
     healthcheck:
@@ -273,6 +241,8 @@ services:
         ipv4_address: 172.19.0.48
     expose:
       - "${POSTGRES_EXPORTER_PORT}"
+    secrets:
+      - postgres_password
     depends_on:
       - pg-1  
     entrypoint: ["/bin/sh", "-c"]
@@ -280,7 +250,7 @@ services:
       - |
         export PGPASSWORD=$(cat /run/secrets/postgres_password | tr -d '\n')
         # pg-0에 직접 접속
-        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-1:5432/postgres?sslmode=disable"
+        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-1:5432/postgres?sslmode=require"
         exec /bin/postgres_exporter
     restart: unless-stopped
     healthcheck:
@@ -296,6 +266,8 @@ services:
         ipv4_address: 172.19.0.49
     expose:
       - "${POSTGRES_EXPORTER_PORT}"
+    secrets:
+      - postgres_password
     depends_on:
       - pg-2  
     entrypoint: ["/bin/sh", "-c"]
@@ -303,7 +275,7 @@ services:
       - |
         export PGPASSWORD=$(cat /run/secrets/postgres_password | tr -d '\n')
         # pg-0에 직접 접속
-        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-2:5432/postgres?sslmode=disable"
+        export DATA_SOURCE_NAME="postgresql://postgres:$PGPASSWORD@pg-2:5432/postgres?sslmode=require"
         exec /bin/postgres_exporter
     restart: unless-stopped
     healthcheck:

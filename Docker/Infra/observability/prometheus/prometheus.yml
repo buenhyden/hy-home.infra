@@ -5,12 +5,11 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']
+        - targets: ["alertmanager:9093"]
 
 # [NEW] 알람 규칙 파일 로드
 rule_files:
   - "alert_rules.yml"
-
 scrape_configs:
   - job_name: "prometheus"
     static_configs:

@@ -1,48 +1,54 @@
-# Use root/example as user/password credentials
-version: "3.9"
-
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-
 services:
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
     ports:
-      - "${OLLAMA_PORT}:${OLLAMA_HOST_PORT}"
-    environment:
-      - OLLAMA_ORIGINS=app://obsidian.md*
-      - OLLAMA_HOST=0.0.0.0:${OLLAMA_HOST_PORT}
+      - "${OLLAMA_HOST_PORT}:${OLLAMA_PORT}"    
     volumes:
-      - ollama-model-volume:/root/.ollama
+      - ollama-data:/root/.ollama
     networks:
-      - nt-models
+      - infra_net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "${QDRANT_HOST_PORT}:${QDRANT_PORT}"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - infra_net
+
+  # 2. Open WebUI 서비스 (선택 사항: ChatGPT 같은 웹 인터페이스)
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: webui
+    container_name: open-webui
+    ports:
+      - "${OLLAMA_WEBUI_HOST_PORT}:${OLLAMA_WEBUI_PORT}" # 브라우저에서 localhost:3000 으로 접속
     environment:
-      - OLLAMA_BASE_URL=http://127.0.0.1:${OLLAMA_HOST_PORT}
+      - OLLAMA_BASE_URL=http://ollama:${OLLAMA_PORT} # 도커 네트워크 내부 통신
+      # --- RAG 설정 추가 ---
+      # 벡터 DB 연결 설정
+      - VECTOR_DB_URL=http://qdrant:${QDRANT_PORT}
+      # 임베딩(텍스트를 숫자로 변환) 작업을 Ollama에게 맡김
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
     volumes:
-      - ollama-webui-volume:/app/backend/data
-    networks:
-      - nt-models
+      - ollama-webui:/app/backend/data
+    depends_on:
+      - ollama
+      - qdrant
     restart: unless-stopped
+    networks:
+      - infra_net
 
-volumes:
-  ollama-model-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${OLLAMA_FOLDER}/models
-  ollama-webui-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${OLLAMA_FOLDER}/webui
+
