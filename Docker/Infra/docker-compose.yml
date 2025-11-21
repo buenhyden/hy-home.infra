@@ -151,6 +151,12 @@ volumes:
       o: bind
       type: none
       device: ${DEFAULT_REDIS_DATA_DIR}/node5
+  n8n-redis-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_REDIS_DATA_DIR}/n8n-node
   minio-data:
     driver: local
     driver_opts:

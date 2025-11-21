@@ -30,12 +30,53 @@ services:
       - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
       # 4. 실행 모드 (자체 실행)
       - EXECUTIONS_MODE=regular
+      # --- [모니터링 설정 추가] ---
+      - N8N_METRICS=true      
+      - N8N_METRICS_PREFIX=n8n_  # 메트릭 이름 앞에 붙을 접두사 (관리하기 편함)
+      - N8N_METRICS_INCLUDE_WORKFLOW_ID_LABEL=true # 어떤 워크플로우가 부하를 주는지 식별 가능
+      - N8N_METRICS_INCLUDE_NODE_TYPE_LABEL=true   # 어떤 노드(HTTP, Cron 등)가 많이 쓰이는지 확인
     volumes:
       - n8n-data:/home/node/.n8n
     networks:
       - infra_net
     depends_on:
       - pg-router # 루트 docker-compose에서 include 시 유효
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+  n8n-redis:
+    image: redis:8.2.3-bookworm # Redis 8.2.x
+    container_name: n8n-redis
+    secrets:
+      - redis_password
+    networks:
+      - infra_net
+    restart: unless-stopped    
+    volumes:
+      # 공통 redis.conf
+      - n8n-redis-data:/data
+    command: >
+      sh -c '
+      redis-server 
+      --requirepass "$(cat /run/secrets/redis_password)" 
+      --appendonly yes 
+      --port 6379
+      '
+    # 클러스터 내부 통신 포트는 expose
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"        
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     logging:
       driver: "json-file"
       options:

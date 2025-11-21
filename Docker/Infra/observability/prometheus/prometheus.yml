@@ -54,3 +54,13 @@ scrape_configs:
     static_configs:
       # Docker 네트워크 내부 통신이므로 서비스 이름 사용
       - targets: ["opensearch-exporter:9114"]
+
+  - job_name: "n8n-monitor"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["n8n:5678"] # 도커 네트워크 내부에서 n8n 컨테이너를 찾음
+
+  - job_name: "qdrant-monitor"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["qdrant:6333"] # Qdrant는 기본적으로 6333/metrics를 엽니다.
