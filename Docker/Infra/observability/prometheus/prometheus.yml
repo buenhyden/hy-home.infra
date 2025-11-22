@@ -10,6 +10,7 @@ alerting:
 # [NEW] 알람 규칙 파일 로드
 rule_files:
   - "alert_rules.yml"
+
 scrape_configs:
   - job_name: "prometheus"
     static_configs:
@@ -23,6 +24,10 @@ scrape_configs:
     static_configs:
       - targets: ["cadvisor:8080"]
 
+  - job_name: "alertmanager"
+    static_configs:
+      - targets: ["alertmanager:9093"]
+
   # -----------------------------------------------
   # Infra Components (별도 Docker Compose 파일에 정의된 서비스들)
   # infra_net 네트워크를 통해 이름으로 접근
@@ -35,9 +40,13 @@ scrape_configs:
         labels:
           cluster: "pg-ha-cluster"
 
-  - job_name: "redis-exporter"
+  - job_name: "redis-cluster-exporter"
     static_configs:
       - targets: ["redis-exporter:9121"]
+
+  - job_name: "n8n-redis-exporter"
+    static_configs:
+      - targets: ["n8n-redis-exporter:9121"]
 
   - job_name: "kafka-exporter"
     static_configs:
@@ -64,3 +73,11 @@ scrape_configs:
     metrics_path: "/metrics"
     static_configs:
       - targets: ["qdrant:6333"] # Qdrant는 기본적으로 6333/metrics를 엽니다.
+
+  - job_name: "ollama"
+    static_configs:
+      - targets: ["ollama-exporter:8000"]
+
+  - job_name: "haproxy"
+    static_configs:
+      - targets: ["pg-router:8404"] # 도커 내부 통신

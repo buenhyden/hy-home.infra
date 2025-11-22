@@ -188,7 +188,7 @@ services:
   # HAProxy 라우터 (Writer/Reader 분리)
   ###############################################################
   pg-router:
-    image: haproxy:2.9
+    image: haproxy:3.2
     container_name: pg-router    
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
@@ -196,6 +196,7 @@ services:
       - "${POSTGRES_WRITE_HOST_PORT}:${POSTGRES_WRITE_PORT}" # Write endpoint
       - "${POSTGRES_READ_HOST_PORT}:${POSTGRES_READ_PORT}" # Read endpoint
       - "${HAPROXY_HOST_PORT}:${HAPROXY_PORT}" # Stats (옵션)
+      - "${HAPROXY_METRICS_HOST_PORT}:${HAPROXY_METRICS_PORT}" # Stats (옵션)
     networks:
       infra_net:
         ipv4_address: 172.19.0.46

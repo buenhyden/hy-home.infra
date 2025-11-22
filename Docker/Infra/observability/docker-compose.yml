@@ -32,8 +32,8 @@ services:
     networks:
       infra_net:
         ipv4_address: 172.19.0.22
-    expose:
-      - ${LOKI_PORT}
+    ports:
+      - "${LOKI_HOST_PORT}:${LOKI_PORT}"
     volumes:
       - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki-data:/loki

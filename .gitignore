@@ -7,6 +7,8 @@ Docker/secrets/
 Docker/.env*
 Docker/Infra/.env
 Docker/Infra/observability/alertmanager/config.yml
+Docker/Infra/observability/tempo/tempo.yaml
+Docker/Infra/observability/loki/loki-config.yaml
 Docker/Projects/.env
 Docker/Infra/**/.env
 Docker/Infra/**/.env.*

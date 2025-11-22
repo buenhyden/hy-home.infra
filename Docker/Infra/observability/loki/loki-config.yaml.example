@@ -11,8 +11,8 @@ common:
     s3:
       endpoint: http://minio:9000 # Docker 내부 MinIO 주소
       bucketnames: loki-bucket # Loki용 버킷 이름
-      access_key_id: MINIO_ADMIN # MinIO 아이디 (아래 Compose 설정 참고)
-      secret_access_key: AwVE8u4vg9MWcJP # MinIO 비밀번호
+      access_key_id: ${MINIO_ROOT_USER} # MinIO 아이디 (아래 Compose 설정 참고)
+      secret_access_key: ${MINIO_ROOT_PASSWORD} # MinIO 비밀번호
       s3forcepathstyle: true # MinIO 필수 옵션
       insecure: true # HTTP 사용 허용
   replication_factor: 1
@@ -32,7 +32,7 @@ schema_config:
 
 # [추가] S3 사용 시 필수: 데이터 정리 및 보관 주기 관리
 compactor:
-  working_directory: /tmp/loki/compactor  
+  working_directory: /tmp/loki/compactor
   delete_request_store: s3
   compaction_interval: 10m
   retention_enabled: true

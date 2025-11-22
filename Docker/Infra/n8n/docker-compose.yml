@@ -82,3 +82,35 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+        
+  n8n-redis-exporter:
+    image: oliver006/redis_exporter:v1.80.0-alpine
+    container_name: n8n-redis-exporter
+    expose:
+      - "${REDIS_EXPORTER_PORT}"
+    networks:
+      - infra_net
+    restart: unless-stopped
+    secrets:
+      - redis_password    
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        echo "Reading password from secret..."
+        export REDIS_PASSWORD=$(cat /run/secrets/redis_password | tr -d '\n')
+        
+        echo "Starting Redis Exporter..."
+        # -redis.password-file 대신 -redis.password 사용
+        exec /redis_exporter \
+          -redis.addr=redis://n8n-redis:6379 \
+          -redis.password="$REDIS_PASSWORD" \
+          -web.listen-address=:${REDIS_EXPORTER_PORT} 
+    depends_on: # healthcheck를 사용하므로 condition으로 변경 (더 안정적)
+      n8n-redis: { condition: service_healthy }
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"

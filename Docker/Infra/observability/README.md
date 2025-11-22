@@ -8,7 +8,7 @@
 | 서비스명 | 역할 | 포트 |
 | --- | --- | --- |
 | **prometheus** | 메트릭 수집 및 저장 | `9090` |
-| **loki** | 로그 수집 및 저장 | `3100` |
+| **loki** | 로그 수집 및 저장 | `3100` (Host Exposed) |
 | **tempo** | 분산 트레이싱 저장소 | `3200`, `4317`(OTLP) |
 | **grafana** | 데이터 시각화 대시보드 | `3000` |
 | **alloy** | OpenTelemetry Collector (메트릭/로그/트레이스 수집기) | `12345` |
@@ -20,8 +20,13 @@
 - **Grafana**: `admin` / `GRAFANA_ADMIN_PASSWORD` (환경 변수)
 - **데이터 흐름**:
     - **Logs**: App -> Alloy -> Loki -> Grafana
-    - **Metrics**: App/Exporters -> Alloy -> Prometheus -> Grafana
-    - **Traces**: App -> Alloy -> Tempo -> Grafana
+    - **Metrics**: App/Exporters (n8n, Qdrant, Ollama, Redis, Postgres, HAProxy) -> Alloy/Prometheus -> Grafana
+    - **Traces**: App -> Alloy -> Tempo (S3 Backend) -> Grafana
+
+## 💾 스토리지 백엔드 (S3)
+
+- **Tempo**: MinIO(`tempo-bucket`)를 백엔드 스토리지로 사용하도록 설정되었습니다.
+- **Metrics Generator**: Tempo가 트레이스 데이터를 분석하여 RED(Rate, Errors, Duration) 메트릭을 생성하고 Prometheus로 전송합니다.
 
 ## 📦 볼륨 마운트
 

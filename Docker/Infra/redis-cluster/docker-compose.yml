@@ -274,7 +274,7 @@ services:
         echo "Starting Redis Exporter..."
         # -redis.password-file 대신 -redis.password 사용
         exec /redis_exporter \
-          -redis.addr=redis://redis-node-0:6379 \
+          -redis.addr=redis://redis-node-0:6379,redis://redis-node-1:6379,redis://redis-node-2:6379,redis://redis-node-3:6379,redis://redis-node-4:6379,redis://redis-node-5:6379 \
           -redis.password="$REDIS_PASSWORD" \
           -web.listen-address=:${REDIS_EXPORTER_PORT} 
     depends_on: # healthcheck를 사용하므로 condition으로 변경 (더 안정적)

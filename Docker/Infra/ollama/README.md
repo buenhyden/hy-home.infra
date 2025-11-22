@@ -2,6 +2,7 @@
 
 **Ollama**는 로컬에서 LLM(Large Language Model)을 실행하기 위한 도구입니다.
 이 구성은 **Ollama**를 중심으로 **Open WebUI**(채팅 UI), **Qdrant**(벡터 DB), **n8n**(자동화)을 통합하여 RAG(Retrieval-Augmented Generation) 파이프라인을 구축합니다.
+또한 **Ollama Exporter**를 통해 메트릭을 수집하여 모니터링할 수 있습니다.
 
 ### 설치 및 실행 (Step-by-Step)
 

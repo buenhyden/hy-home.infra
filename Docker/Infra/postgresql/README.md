@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | **pg-0, pg-1, pg-2** | PostgreSQL 데이터베이스 노드 (Spilo) | `5432` (내부) |
 | **etcd-1, etcd-2, etcd-3** | 분산 합의 저장소 (DCS) | `2379` |
-| **pg-router** | HAProxy (Writer/Reader 분기) | `5000` (Write), `5001` (Read) |
+| **pg-router** | HAProxy (Writer/Reader 분기) | `5000` (Write), `5001` (Read), `8404` (Metrics) |
 | **pg-*-exporter** | 각 노드별 메트릭 Exporter | `9187` |
 
 ## 🛠 설정 및 환경 변수

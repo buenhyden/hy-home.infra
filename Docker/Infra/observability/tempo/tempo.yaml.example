@@ -55,8 +55,8 @@ storage:
     s3:
       bucket: tempo-bucket # MinIO에 미리 만들어둔 bucket 이름
       endpoint: minio:9000 # Docker 네트워크 상의 MinIO 엔드포인트
-      access_key: MINIO_ADMIN # MINIO_ROOT_USER (또는 전용 계정)
-      secret_key: AwVE8u4vg9MWcJP # MINIO_ROOT_PASSWORD (또는 전용 계정 비밀번호)
+      access_key: ${MINIO_ROOT_USER} # MINIO_ROOT_USER (또는 전용 계정)
+      secret_key: ${MINIO_ROOT_PASSWORD} # MINIO_ROOT_PASSWORD (또는 전용 계정 비밀번호)
       insecure: true # http 사용이므로 true
 
 # ---------- 공통 오버라이드 ----------

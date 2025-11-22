@@ -8,12 +8,15 @@
 | 서비스명 | 역할 | 포트 |
 | --- | --- | --- |
 | **n8n** | 워크플로우 자동화 서버 | `5678` |
+| **n8n-redis** | n8n 전용 Redis (Queue/Cache) | `6379` (Internal) |
+| **n8n-redis-exporter** | Redis 메트릭 Exporter | `9121` |
 
 ## 🛠 설정 및 환경 변수
 
 - **DB 백엔드**: PostgreSQL (`Docker/Infra/postgresql`) 사용.
 - **보안**: `N8N_ENCRYPTION_KEY` 설정 필수.
 - **Webhook**: `WEBHOOK_URL` 설정을 통해 외부 트리거 수신.
+- **모니터링**: `N8N_METRICS=true` 설정으로 `/metrics` 엔드포인트 활성화.
 
 ## 📦 볼륨 마운트
 

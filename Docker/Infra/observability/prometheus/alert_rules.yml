@@ -1,4 +1,338 @@
 groups:
+  - name: prometheus_alerts
+    rules:
+      - alert: PrometheusJobMissing
+        expr: absent(up{job="prometheus"})
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus job missing (instance {{ $labels.instance }})
+          description:
+            "A Prometheus job has disappeared\n  VALUE = {{ $value }}\n  LABELS
+            = {{ $labels }}"
+
+      - alert: PrometheusTargetMissing
+        expr: up == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Prometheus target missing (instance {{ $labels.instance }})
+          description:
+            "A Prometheus target has disappeared. An exporter might be
+            crashed.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusAllTargetsMissing
+        expr: sum by (job) (up) == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus all targets missing (instance {{ $labels.instance }})
+          description:
+            "A Prometheus job does not have living target anymore.\n  VALUE = {{
+            $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTargetMissingWithWarmupTime
+        expr:
+          sum by (instance, job) ((up == 0) * on (instance) group_left(__name__)
+          (node_time_seconds - node_boot_time_seconds > 600))
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus target missing with warmup time (instance {{
+            $labels.instance }})
+          description:
+            "Allow a job time to start up (10 minutes) before alerting that it's
+            down.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusConfigurationReloadFailure
+        expr: prometheus_config_last_reload_successful != 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus configuration reload failure (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus configuration reload error\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTooManyRestarts
+        expr:
+          changes(process_start_time_seconds{job=~"prometheus|pushgateway|alertmanager"}[15m])
+          > 2
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus too many restarts (instance {{ $labels.instance }})
+          description:
+            "Prometheus has restarted more than twice in the last 15 minutes. It
+            might be crashlooping.\n  VALUE = {{ $value }}\n  LABELS = {{
+            $labels }}"
+      - alert: PrometheusAlertmanagerJobMissing
+        expr: absent(up{job="alertmanager"})
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus AlertManager job missing (instance {{ $labels.instance
+            }})
+          description:
+            "A Prometheus AlertManager job has disappeared\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusAlertmanagerConfigurationReloadFailure
+        expr: alertmanager_config_last_reload_successful != 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus AlertManager configuration reload failure (instance {{
+            $labels.instance }})
+          description:
+            "AlertManager configuration reload error\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusAlertmanagerConfigNotSynced
+        expr: count(count_values("config_hash", alertmanager_config_hash)) > 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus AlertManager config not synced (instance {{
+            $labels.instance }})
+          description:
+            "Configurations of AlertManager cluster instances are out of
+            sync\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusNotConnectedToAlertmanager
+        expr: prometheus_notifications_alertmanagers_discovered < 1
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus not connected to alertmanager (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus cannot connect the alertmanager\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusRuleEvaluationFailures
+        expr: increase(prometheus_rule_evaluation_failures_total[3m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus rule evaluation failures (instance {{ $labels.instance
+            }})
+          description:
+            "Prometheus encountered {{ $value }} rule evaluation failures,
+            leading to potentially ignored alerts.\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTemplateTextExpansionFailures
+        expr:
+          increase(prometheus_template_text_expansion_failures_total[3m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus template text expansion failures (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} template text expansion
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusRuleEvaluationSlow
+        expr:
+          prometheus_rule_group_last_duration_seconds >
+          prometheus_rule_group_interval_seconds
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus rule evaluation slow (instance {{ $labels.instance }})
+          description:
+            "Prometheus rule evaluation took more time than the scheduled
+            interval. It indicates a slower storage backend access or too
+            complex query.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusNotificationsBacklog
+        expr: min_over_time(prometheus_notifications_queue_length[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus notifications backlog (instance {{ $labels.instance }})
+          description:
+            "The Prometheus notification queue has not been empty for 10
+            minutes\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusAlertmanagerNotificationFailing
+        expr: rate(alertmanager_notifications_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus AlertManager notification failing (instance {{
+            $labels.instance }})
+          description:
+            "Alertmanager is failing sending notifications\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTargetEmpty
+        expr: prometheus_sd_discovered_targets == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Prometheus target empty (instance {{ $labels.instance }})
+          description:
+            "Prometheus has no target in service discovery\n  VALUE = {{ $value
+            }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTargetScrapingSlow
+        expr:
+          prometheus_target_interval_length_seconds{quantile="0.9"} / on
+          (interval, instance, job)
+          prometheus_target_interval_length_seconds{quantile="0.5"} > 1.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus target scraping slow (instance {{ $labels.instance }})
+          description:
+            "Prometheus is scraping exporters slowly since it exceeded the
+            requested interval time. Your Prometheus server is
+            under-provisioned.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusLargeScrape
+        expr:
+          increase(prometheus_target_scrapes_exceeded_sample_limit_total[10m]) >
+          10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus large scrape (instance {{ $labels.instance }})
+          description:
+            "Prometheus has many scrapes that exceed the sample limit\n  VALUE =
+            {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTargetScrapeDuplicate
+        expr:
+          increase(prometheus_target_scrapes_sample_duplicate_timestamp_total[5m])
+          > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus target scrape duplicate (instance {{ $labels.instance }})
+          description:
+            "Prometheus has many samples rejected due to duplicate timestamps
+            but different values\n  VALUE = {{ $value }}\n  LABELS = {{ $labels
+            }}"
+      - alert: PrometheusTsdbCheckpointCreationFailures
+        expr:
+          increase(prometheus_tsdb_checkpoint_creations_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB checkpoint creation failures (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} checkpoint creation
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbCheckpointDeletionFailures
+        expr:
+          increase(prometheus_tsdb_checkpoint_deletions_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB checkpoint deletion failures (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} checkpoint deletion
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbCompactionsFailed
+        expr: increase(prometheus_tsdb_compactions_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB compactions failed (instance {{ $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} TSDB compactions
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbHeadTruncationsFailed
+        expr: increase(prometheus_tsdb_head_truncations_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB head truncations failed (instance {{
+            $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} TSDB head truncation
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbReloadFailures
+        expr: increase(prometheus_tsdb_reloads_failures_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB reload failures (instance {{ $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} TSDB reload failures\n  VALUE =
+            {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbWalCorruptions
+        expr: increase(prometheus_tsdb_wal_corruptions_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB WAL corruptions (instance {{ $labels.instance }})
+          description:
+            "Prometheus encountered {{ $value }} TSDB WAL corruptions\n  VALUE =
+            {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTsdbWalTruncationsFailed
+        expr: increase(prometheus_tsdb_wal_truncations_failed_total[1m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            Prometheus TSDB WAL truncations failed (instance {{ $labels.instance
+            }})
+          description:
+            "Prometheus encountered {{ $value }} TSDB WAL truncation
+            failures\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: PrometheusTimeseriesCardinality
+        expr:
+          label_replace(count by(__name__) ({__name__=~".+"}), "name", "$1",
+          "__name__", "(.+)") > 10000
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary:
+            Prometheus timeseries cardinality (instance {{ $labels.instance }})
+          description:
+            "The \"{{ $labels.name }}\" timeseries cardinality is getting very
+            high: {{ $value }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+  # [1] 기본 인프라 감시
   - name: infrastructure_alerts
     rules:
       - alert: InstanceDown
@@ -7,7 +341,341 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Instance {{ $labels.instance }} down"
+          summary: "인스턴스 다운: {{ $labels.instance }}"
+          description: "{{ $labels.job }} 서비스가 1분 이상 응답하지 않습니다."
+
+      - alert: HighCpuUsage
+        expr:
+          sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) *
+          100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU 과부하 지속: {{ $labels.name }}"
           description:
-            "{{ $labels.instance }} of job {{ $labels.job }} has been down for
-            more than 1 minute."
+            "{{ $labels.name }} 컨테이너가 5분 넘게 CPU 85% 이상을 점유
+            중입니다."
+
+      - alert: HighMemoryUsage
+        expr:
+          (container_memory_usage_bytes{name!=""} /
+          container_spec_memory_limit_bytes{name!=""}) * 100 > 90 and on (name)
+          container_spec_memory_limit_bytes{name!=""} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "메모리 부족 임박: {{ $labels.name }}"
+          description:
+            "{{ $labels.name }} 컨테이너가 메모리 리밋의 90% 이상을 사용
+            중입니다."
+
+  # [2] n8n 자동화 시스템
+  - name: n8n_alerts
+    rules:
+      - alert: N8nWorkflowFailed
+        expr:
+          increase(n8n_workflow_execution_count_total{status="error"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: error
+        annotations:
+          summary: "n8n 워크플로우 실패 감지"
+          description:
+            "workflow_id={{ $labels.workflow_id }} 실행 중 에러가 발생했습니다."
+
+      - alert: N8nLeaderMissing
+        expr: n8n_instance_role_leader != 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "n8n 리더 인스턴스 이상"
+          description:
+            "n8n 인스턴스 {{ $labels.instance }} 가 리더가 아니거나 리더
+            플래그가 내려갔습니다."
+
+      - alert: N8nHighMemoryUsage
+        expr: n8n_process_resident_memory_bytes > 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "n8n 메모리 사용량 높음"
+          description:
+            "n8n 프로세스가 1GiB 이상 메모리를 5분 이상 사용 중입니다."
+
+  # [3] Redis
+  - name: redis_alerts
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 다운: {{ $labels.instance }}"
+          description:
+            "Redis 인스턴스 {{ $labels.instance }} 가 1분 이상 down 상태입니다."
+
+      - alert: RedisMemoryCritical
+        expr:
+          redis_memory_max_bytes > 0 and on (instance) (redis_memory_used_bytes
+          / redis_memory_max_bytes > 0.9)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 메모리 90% 초과: {{ $labels.instance }}"
+          description:
+            "Redis 인스턴스 {{ $labels.instance }} 메모리 사용률이 90%를
+            초과했습니다."
+
+      - alert: RedisKeyEvictions
+        expr: increase(redis_evicted_keys_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis 키 퇴출 발생: {{ $labels.instance }}"
+          description:
+            "최근 5분 동안 Redis에서 키 퇴출(eviction)이 발생했습니다."
+
+  # [4] Kafka
+  - name: kafka_alerts
+    rules:
+      - alert: KafkaBrokerDown
+        expr: kafka_brokers < 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka 브로커 다운 감지"
+          description:
+            "Kafka 브로커 수가 기대값보다 적습니다. 현재 {{ $value }} 개입니다."
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr:
+          sum(kafka_topic_partition_under_replicated_partition) by (topic) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka under-replicated 파티션 존재: {{ $labels.topic }}"
+          description:
+            "토픽 {{ $labels.topic }} 에 under-replicated 파티션이 존재합니다."
+
+      - alert: KafkaConsumerLagHigh
+        expr: sum(kafka_consumergroup_lag) by (consumergroup, topic) > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka 처리 지연 발생: {{ $labels.consumergroup }}"
+          description:
+            "컨슈머 그룹 {{ $labels.consumergroup }} / 토픽 {{ $labels.topic }}
+            의 lag가 1000 이상입니다."
+
+  # [5] PostgreSQL
+  - name: postgres_alerts
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 다운: {{ $labels.instance }}"
+          description:
+            "PostgreSQL 인스턴스 {{ $labels.instance }} 가 1분 이상 down
+            상태입니다."
+
+      - alert: PostgresTooManyConnections
+        expr: pg_stat_activity_count > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB 연결 수 80개 초과: {{ $labels.instance }}"
+          description:
+            "PostgreSQL 인스턴스 {{ $labels.instance }} 의 활성 세션 수가 80을
+            초과했습니다."
+
+      - alert: PostgresReplicationLagHigh
+        expr: pg_replication_lag > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL 리플리케이션 지연"
+          description:
+            "리플리케이션 지연이 5초를 초과했습니다. replica={{ $labels.server
+            }}"
+
+  # [6] OpenSearch / MinIO / Qdrant 스토리지 계층
+  - name: OpenSearch_alerts
+    rules:
+      - alert: OpenSearchHealthRed
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenSearch 상태 RED"
+          description: "OpenSearch 클러스터 상태가 RED 입니다."
+
+      - alert: OpenSearchHealthYellow
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenSearch 상태 YELLOW"
+          description:
+            "OpenSearch 클러스터 상태가 YELLOW 로 5분 이상 지속 중입니다."
+
+  - name: Minio_alerts
+    rules:
+      - alert: MinioServiceDown
+        expr: up{job="minio"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO 서비스 다운: {{ $labels.instance }}"
+          description:
+            "MinIO 타겟 {{ $labels.instance }} 가 1분 이상 응답하지 않습니다."
+
+      - alert: MinioHighStorageUsage
+        expr:
+          sum(minio_cluster_capacity_used_bytes) /
+          sum(minio_cluster_capacity_total_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO 저장소 사용률 85% 초과"
+          description:
+            "MinIO 클러스터 사용률이 85%를 초과했습니다. 현재: {{ $value |
+            humanizePercentage }}"
+
+  - name: Qdrant_alerts
+    rules:
+      - alert: QdrantDown
+        expr: up{job="qdrant-monitor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Qdrant 서비스 다운"
+          description:
+            "Qdrant 인스턴스 {{ $labels.instance }} 가 1분 이상 응답하지
+            않습니다."
+
+      - alert: QdrantHighMemoryUsage
+        expr: memory_resident_bytes > 2 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Qdrant 메모리 사용량 높음"
+          description: >
+            Qdrant 프로세스 메모리(resident)가 2GiB를 초과했습니다. 현재 값: {{
+            $value | humanize1024 }}
+
+      - alert: QdrantHighOpenFds
+        expr: process_open_fds / process_max_fds > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Qdrant 파일 디스크립터 사용률 80% 초과"
+          description: "Qdrant 프로세스의 FD 사용률이 80%를 초과했습니다."
+
+  # [7] Ollama (ollama-exporter)
+
+  - name: ollama_alerts
+    rules:
+      - alert: OllamaExporterDown
+        expr: up{job="ollama"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ollama exporter 다운"
+          description:
+            "Ollama exporter 타겟(ollama-exporter)이 1분 이상 응답하지 않습니다."
+
+      - alert: OllamaServerDown
+        expr: ollama_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ollama 서버 다운"
+          description: "Ollama HTTP API가 응답하지 않습니다."
+
+      - alert: OllamaScrapeSlow
+        expr:
+          histogram_quantile(0.9,
+          sum(rate(ollama_exporter_scrape_duration_seconds_bucket[5m])) by (le))
+          > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ollama 스크레이프 슬로우"
+          description:
+            "Ollama exporter 스크레이프 90퍼센타일 지연이 2초를 초과했습니다."
+  # [9] HAProxy Load Balancer
+  - name: haproxy_alerts
+    rules:
+      - alert: HAProxyDown
+        expr: up{job="haproxy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HAProxy 다운"
+          description:
+            "로드밸런서(HAProxy)가 응답하지 않습니다. 서비스 접속 불가
+            상태입니다."
+
+      - alert: HAProxyBackendDown
+        expr: haproxy_backend_status{proxy=~"pg-primary|pg-replicas|stats"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HAProxy 백엔드 다운: {{ $labels.proxy }}"
+          description: "백엔드 서비스 {{ $labels.proxy }}가 다운되었습니다."
+
+      - alert: HAProxyHighErrorRate
+        expr:
+          (rate(haproxy_backend_http_responses_total{code="5xx"}[1m]) /
+          rate(haproxy_backend_http_responses_total[1m])) * 100 > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HAProxy 에러율 높음: {{ $labels.proxy }}"
+          description:
+            "{{ $labels.proxy }} 백엔드에서 5xx 에러가 5% 이상 발생 중입니다."
+
+  # [10] Grafana Alloy
+  - name: Grafana_Alloy_alerts
+    rules:
+      - alert: GrafanaAlloyServiceDown
+        expr:
+          count by (instance) (alloy_build_info) unless count by (instance)
+          (alloy_build_info offset 2m)
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary:
+            "Grafana Alloy service down (instance {{ $labels.instance }})"
+          description:
+            "Alloy on (instance {{ $labels.instance }}) is not responding or has
+            stopped running. VALUE = {{ $value }} LABELS = {{ $labels }}"

@@ -52,5 +52,16 @@ services:
     restart: unless-stopped
     networks:
       - infra_net
+  
+  ollama-exporter:
+    image: lucabecker42/ollama-exporter:latest
+    container_name: ollama-exporter
+    environment:
+      - OLLAMA_HOST=host.docker.internal:${OLLAMA_PORT}
+    ports:
+      - "${OLLAMA_EXPORTER_HOST_PORT}:${OLLAMA_EXPORTER_PORT}"   # /metrics
+    restart: unless-stopped
+    networks:
+      - infra_net
 
 
