@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: placeholder-config
+  namespace: default
+data:
+  message:
+    "This is a placeholder to ensure CI pipeline passes when k8s/apps is empty."
