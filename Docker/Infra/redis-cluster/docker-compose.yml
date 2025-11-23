@@ -293,6 +293,7 @@ services:
   redisinsight:
     image: redis/redisinsight:latest
     container_name: redisinsight
+    restart: unless-stopped
     networks:
       infra_net:
         ipv4_address: 172.19.0.58

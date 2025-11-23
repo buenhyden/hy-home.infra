@@ -6,6 +6,7 @@ services:
     image: confluentinc/cp-kafka:7.7.0
     container_name: kafka-1
     hostname: kafka-1
+    restart: unless-stopped
     ports:
       - "${KAFKA_CONTROLLER_1_HOST_PORT}:${KAFKA_CONTROLLER_PORT}"
     environment:
@@ -46,8 +47,7 @@ services:
       - kafka-1-data:/var/lib/kafka/data
     networks:
       infra_net:
-        ipv4_address: 172.19.0.11
-    restart: unless-stopped
+        ipv4_address: 172.19.0.11    
     logging:
       driver: "json-file"
       options:
