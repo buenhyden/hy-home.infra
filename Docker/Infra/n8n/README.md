@@ -1,33 +1,34 @@
 # n8n
 
-**n8n**은 확장 가능한 워크플로우 자동화 도구입니다.
-다양한 앱과 서비스를 연결하여 작업을 자동화할 수 있습니다.
+## Overview
+This directory contains the Docker Compose configuration for running n8n, a workflow automation tool. It is configured to use PostgreSQL as the database and a dedicated Redis instance for queue management.
 
-## 🚀 서비스 구성
+## Services
+- **n8n**: The n8n workflow automation server.
+- **n8n-redis**: Redis instance for n8n's internal queue.
+- **n8n-redis-exporter**: Prometheus exporter for Redis metrics.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **n8n** | 워크플로우 자동화 서버 | `5678` |
-| **n8n-redis** | n8n 전용 Redis (Queue/Cache) | `6379` (Internal) |
-| **n8n-redis-exporter** | Redis 메트릭 Exporter | `9121` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
+- External PostgreSQL service running (as configured in `.env`).
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `N8N_HOST_PORT`: Host port for n8n.
+- `N8N_ENCRYPTION_KEY`: Key for encrypting credentials.
+- `POSTGRES_HOSTNAME`, `POSTGRES_WRITE_PORT`, `N8N_DB_USER`, `N8N_DB_PASSWORD`: Database connection details.
+- `REDIS_PASSWORD`: Password for the internal Redis instance.
 
-- **DB 백엔드**: PostgreSQL (`Docker/Infra/postgresql`) 사용.
-- **보안**: `N8N_ENCRYPTION_KEY` 설정 필수.
-- **Webhook**: `WEBHOOK_URL` 설정을 통해 외부 트리거 수신.
-- **모니터링**: `N8N_METRICS=true` 설정으로 `/metrics` 엔드포인트 활성화.
-
-## 📦 볼륨 마운트
-
-- `n8n-data`: 사용자 데이터 및 설정 (`/home/node/.n8n`)
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **데이터베이스**: PostgreSQL 서비스(`pg-router`)가 실행 중이어야 합니다.
-- **타임존**: `GENERIC_TIMEZONE`을 `Asia/Seoul`로 설정하여 스케줄링 정확도 확보.
+## Access
+- **n8n UI**: `http://localhost:${N8N_HOST_PORT}`
+
+## Volumes
+- `n8n-data`: Persistent storage for n8n data.
+- `n8n-redis-data`: Persistent storage for Redis data.

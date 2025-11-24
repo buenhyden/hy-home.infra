@@ -1,25 +1,28 @@
 # Keycloak
 
-**Keycloak**는 최신 애플리케이션 및 서비스를 위한 오픈 소스 ID 및 액세스 관리(IAM) 솔루션입니다.
-현재 구성은 개발 모드(`start-dev`)로 설정되어 있습니다.
+## Overview
+This directory contains the Docker Compose configuration for running Keycloak in development mode.
 
-## 🚀 서비스 구성
+## Services
+- **keycloak**: Identity and Access Management server.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **keycloak** | IAM 서버 | `18080` (Host) -> `8080` (Container) |
+## Prerequisites
+- Docker and Docker Compose installed.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service is configured for development use:
+- `KC_HOSTNAME`: localhost
+- `KC_HTTP_PORT`: 8080
 
-- **이미지**: `quay.io/keycloak/keycloak:26.4.0`
-- **모드**: `start-dev` (프로덕션 사용 시 변경 필요)
-- **관리자 콘솔**: `http://localhost:18080`
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **데이터베이스**: 현재 내장 H2 데이터베이스를 사용하도록 설정되어 있을 수 있습니다. 프로덕션 환경에서는 PostgreSQL 등 외부 DB 연결을 권장합니다.
+## Access
+- **Keycloak Admin Console**: `http://localhost:18080`
+
+## Notes
+- This configuration uses `start-dev` and is not suitable for production.
+- For production, configure an external database (PostgreSQL) and proper SSL/TLS.

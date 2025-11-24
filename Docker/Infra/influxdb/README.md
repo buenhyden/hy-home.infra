@@ -1,32 +1,33 @@
 # InfluxDB
 
-**InfluxDB**는 시계열 데이터(Time Series Data)를 저장하고 조회하는 데 최적화된 데이터베이스입니다.
-모니터링 메트릭, IoT 센서 데이터 등을 저장하는 데 사용됩니다.
+## Overview
+This directory contains the Docker Compose configuration for running InfluxDB v2.7, a time series database.
 
-## 🚀 서비스 구성
+## Services
+- **influxdb**: The InfluxDB server.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **influxdb** | InfluxDB 서버 | `8086` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `INFLUXDB_HOST_PORT`: Host port for InfluxDB.
+- `INFLUXDB_PORT`: Container port (default 8086).
+- `INFLUXDB_DB_NAME`: Database name.
+- `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`: Admin credentials.
+- `INFLUXDB_ORG`: Organization name.
+- `INFLUXDB_BUCKET`: Default bucket name.
+- `INFLUXDB_API_TOKEN`: Admin API token.
 
-- **이미지**: `bitnami/influxdb:latest`
-- **초기 설정**:
-    - `INFLUXDB_ADMIN_USER`: 관리자 계정
-    - `INFLUXDB_ADMIN_USER_PASSWORD`: 관리자 비밀번호
-    - `INFLUXDB_ADMIN_ORG`: 초기 조직(Org) 이름
-    - `INFLUXDB_ADMIN_BUCKET`: 초기 버킷(Bucket) 이름
-
-## 📦 볼륨 마운트
-
-- `influxdb-node1-volume`: 데이터 저장소 (`/bitnami/influxdb`)
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **버전**: InfluxDB v2를 사용합니다. (Flux 쿼리 언어 사용)
+## Access
+- **InfluxDB UI**: `http://localhost:${INFLUXDB_HOST_PORT}`
+
+## Volumes
+- `influxdb-data`: Persistent storage for InfluxDB data.

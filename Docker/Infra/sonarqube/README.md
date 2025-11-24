@@ -1,31 +1,32 @@
 # SonarQube
 
-**SonarQube**는 코드 품질을 지속적으로 검사하기 위한 오픈 소스 플랫폼입니다.
-버그, 코드 스멜, 보안 취약점을 자동으로 감지합니다.
+## Overview
+This directory contains the Docker Compose configuration for running SonarQube Community Edition. It is configured to use an external PostgreSQL database.
 
-## 🚀 서비스 구성
+## Services
+- **sonarqube**: The SonarQube server.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **sonarqube** | 코드 분석 서버 | `9000` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
+- External PostgreSQL service running.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `SONARQUBE_PORT`: Container port.
+- `SONAR_JDBC_URL`: Database connection string.
+- `SONAR_JDBC_USERNAME`, `SONAR_JDBC_PASSWORD`: Database credentials.
 
-- **이미지**: `sonarqube:lts-community`
-- **데이터베이스**: PostgreSQL (`Docker/Infra/postgresql`) 연결.
-- **접속**: `http://localhost:9000` (초기 계정: `admin` / `admin`)
-
-## 📦 볼륨 마운트
-
-- `sonarqube-data-volume`: 데이터
-- `sonarqube-extensions-volume`: 플러그인
-- `sonarqube-logs-volume`: 로그
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **시스템 설정**: Elasticsearch를 내장하고 있어 `vm.max_map_count` 설정(262144 이상)이 필요합니다.
+## Access
+- **SonarQube UI**: Accessible via the configured port (check `docker-compose.yml` or Traefik configuration).
+
+## Volumes
+- `sonarqube-data-volume`: Stores data.
+- `sonarqube-extensions-volume`: Stores plugins.
+- `sonarqube-logs-volume`: Stores logs.

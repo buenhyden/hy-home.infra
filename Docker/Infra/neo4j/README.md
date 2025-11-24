@@ -1,29 +1,30 @@
 # Neo4j
 
-**Neo4j**는 관계형 데이터베이스보다 연결된 데이터를 더 효율적으로 처리하는 그래프 데이터베이스입니다.
-노드(Node), 관계(Relationship), 속성(Property)을 사용하여 데이터를 모델링합니다.
+## Overview
+This directory contains the Docker Compose configuration for running Neo4j, a graph database.
 
-## 🚀 서비스 구성
+## Services
+- **neo4j**: The Neo4j database server.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **neo4j** | 그래프 데이터베이스 서버 | `7474` (HTTP), `7687` (Bolt) |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `NEO4J_HOST_BOLT_PORT`: Host port for the Bolt protocol.
+- `NEO4J_BOLT_PORT`: Container port for Bolt.
+- `NEO4J_PASSWORD`: Admin password.
 
-- **이미지**: `bitnami/neo4j:latest`
-- **인증**: `NEO4J_PASSWORD` 환경 변수로 초기 비밀번호 설정.
-- **접속**: 브라우저에서 `http://localhost:7474`로 접속.
-
-## 📦 볼륨 마운트
-
-- `neo4j-volume`: 데이터 저장소 (`/bitnami/neo4j`)
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **초기화**: 첫 실행 시 데이터베이스 초기화에 시간이 걸릴 수 있습니다.
+## Access
+- **Neo4j Browser**: Typically accessible via HTTP (check if HTTP port is mapped) or Bolt connection.
+- **Bolt**: `bolt://localhost:${NEO4J_HOST_BOLT_PORT}`
+
+## Volumes
+- `neo4j-volume`: Persistent storage for Neo4j data.

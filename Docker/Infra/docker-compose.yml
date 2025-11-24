@@ -30,6 +30,8 @@ include:
   - postgresql/docker-compose.yml  
   - n8n/docker-compose.yml
   - ollama/docker-compose.yml
+  - influxdb/docker-compose.yml
+  - locust/docker-compose.yml
   # - wikijs/docker-compose.yml
   # - airflow/docker-compose.yml
   # - loki/docker-compose.yml
@@ -55,6 +57,18 @@ volumes:
   #     o: bind
   #     type: none
   #     device: ${DEFAULT_AI_MODEL_DIR}/webui
+  locust-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_LOCUST_DIR}
+  influxdb-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_INFLUXDB_DIR}/data  
   n8n-data:
     driver: local
     driver_opts:

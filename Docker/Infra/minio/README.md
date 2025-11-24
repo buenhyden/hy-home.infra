@@ -1,28 +1,34 @@
 # MinIO
 
-**MinIO**는 고성능 S3 호환 객체 스토리지입니다.
-클라우드 네이티브 애플리케이션을 위한 데이터 저장소로 사용됩니다.
+## Overview
+This directory contains the Docker Compose configuration for running MinIO, a high-performance, S3 compatible object storage.
 
-## 🚀 서비스 구성
+## Services
+- **minio**: The MinIO server.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **minio** | Object Storage 서버 | `9000` (API), `9001` (Console) |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `MINIO_HOST_PORT`: Host port for the S3 API.
+- `MINIO_CONSOLE_HOST_PORT`: Host port for the MinIO Console.
+- `MINIO_PORT`, `MINIO_CONSOLE_PORT`: Container ports.
 
-- **콘솔 접속**: `http://localhost:9001`
-- **인증**: Docker Secret(`minio_root_user`, `minio_root_password`)을 통해 관리자 계정 설정.
+It also uses Docker secrets for sensitive data:
+- `minio_root_user`
+- `minio_root_password`
 
-## 📦 볼륨 마운트
-
-- `minio-data`: 데이터 저장소 (`/data`)
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **Secret**: `/run/secrets/` 경로의 파일을 통해 비밀번호를 관리합니다.
+## Access
+- **MinIO Console**: `http://localhost:${MINIO_CONSOLE_HOST_PORT}`
+- **S3 API**: `http://localhost:${MINIO_HOST_PORT}`
+
+## Volumes
+- `minio-data`: Persistent storage for objects.

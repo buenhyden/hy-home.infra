@@ -1,36 +1,44 @@
 # Apache Kafka (KRaft Mode)
 
-**Apache Kafka**는 고성능 분산 이벤트 스트리밍 플랫폼입니다.
-이 구성은 **Zookeeper를 제거한 KRaft(Kafka Raft Metadata) 모드**로 3개의 브로커 클러스터를 구성합니다.
+## Overview
+This directory contains the Docker Compose configuration for running a 3-node Apache Kafka cluster in KRaft mode (without ZooKeeper). It includes the Schema Registry, Kafka Connect, REST Proxy, Kafka UI, and Kafka Exporter.
 
-## 🚀 서비스 구성
+## Services
+- **kafka-1, kafka-2, kafka-3**: Three Kafka brokers acting as both brokers and controllers.
+- **schema-registry**: Confluent Schema Registry.
+- **kafka-connect**: Distributed Kafka Connect.
+- **kafka-rest-proxy**: REST Proxy for Kafka.
+- **kafka-ui**: Web UI for managing the Kafka cluster (Provectus).
+- **kafka-exporter**: Prometheus exporter for Kafka metrics.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **kafka-1, 2, 3** | Kafka 브로커 및 컨트롤러 (KRaft) | `9092` (Client), `9093` (Controller) |
-| **schema-registry** | Avro 등 스키마 관리 | `8081` |
-| **kafka-connect** | 데이터 통합 (Source/Sink Connectors) | `8083` |
-| **kafka-rest-proxy** | HTTP REST API로 Kafka 접근 | `8082` |
-| **kafka-ui** | 웹 기반 관리 UI (Provectus) | `8080` |
-| **kafka-exporter** | Prometheus용 메트릭 Exporter | `9308` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `KAFKA_CLSUTER_ID`: Unique ID for the Kafka cluster.
+- `KAFKA_CLSUTER_NAME`: Name of the cluster for UI.
+- `KAFKA_CONTROLLER_*_HOST_PORT`: Ports for accessing brokers.
+- `SCHEMA_REGISTRY_HOST_PORT`: Port for Schema Registry.
+- `KAFKA_CONNECT_HOST_PORT`: Port for Kafka Connect.
+- `KAFKA_REST_PROXY_HOST_PORT`: Port for REST Proxy.
+- `KAFKA_UI_HOST_PORT`: Port for Kafka UI.
+- `KAFKA_EXPORTER_HOST_PORT`: Port for Kafka Exporter.
 
-- **KRaft**: `KAFKA_PROCESS_ROLES="broker,controller"`, `KAFKA_CONTROLLER_QUORUM_VOTERS` 설정으로 3노드 쿼럼 구성.
-- **네트워크**: `infra_net` (172.19.0.0/16) 내에서 고정 IP 사용 (`172.19.0.11` ~ `172.19.0.18`).
-- **복제**: 기본 Replication Factor 3, Min ISR 2 설정으로 고가용성 확보.
-
-## 📦 볼륨 마운트
-
-- `kafka-1-data`, `kafka-2-data`, `kafka-3-data`: 각 브로커의 데이터 저장소
-- `kafka-connect-data`: 커넥터 플러그인 및 상태 저장
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **리소스**: 3개의 브로커와 부가 서비스들이 실행되므로 충분한 메모리(4GB 이상 권장)가 필요합니다.
-- **초기화**: 첫 실행 시 클러스터 ID(`CLUSTER_ID`)를 기반으로 포맷팅됩니다.
+## Access
+- **Kafka UI**: `http://localhost:${KAFKA_UI_HOST_PORT}`
+- **Schema Registry**: `http://localhost:${SCHEMA_REGISTRY_HOST_PORT}`
+- **Kafka Connect**: `http://localhost:${KAFKA_CONNECT_HOST_PORT}`
+- **REST Proxy**: `http://localhost:${KAFKA_REST_PROXY_HOST_PORT}`
+- **Metrics**: `http://localhost:${KAFKA_EXPORTER_HOST_PORT}/metrics`
+
+## Volumes
+- `kafka-1-data`, `kafka-2-data`, `kafka-3-data`: Persistent storage for Kafka brokers.
+- `kafka-connect-data`: Persistent storage for Kafka Connect.

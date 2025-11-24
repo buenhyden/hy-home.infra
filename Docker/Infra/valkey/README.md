@@ -1,33 +1,36 @@
-# Valkey (Redis Fork)
+# Valkey (Redis Alternative)
 
-**Valkey**는 Redis의 오픈 소스(BSD 라이선스) 포크로, 고성능 키-값 저장소입니다.
-이 구성은 **Predixy** 프록시를 사용한 클러스터 구성과 단독(Standalone) 구성을 모두 포함합니다.
+## Overview
+This directory contains the Docker Compose configuration for running Valkey, a high-performance key-value store (fork of Redis). It includes a cluster configuration with Predixy proxy and a standalone instance.
 
-## 🚀 서비스 구성
+## Services
+- **valkey-node-1, 2, 3**: Valkey cluster nodes.
+- **valkey-predixy**: Proxy for the Valkey cluster.
+- **valkey-cluster-exporter**: Prometheus exporter for the cluster.
+- **valkey-standalone**: A standalone Valkey instance.
+- **valkey-standalone-exporter**: Prometheus exporter for the standalone instance.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **valkey-node-1, 2, 3** | Valkey 클러스터 노드 | `6379` (Internal) |
-| **valkey-predixy** | 클러스터 프록시 | `7617` |
-| **valkey-standalone** | 단독 실행 인스턴스 | `6379` |
-| **valkey-*-exporter** | Prometheus용 메트릭 Exporter | `9121` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `VALKEY_PORT`: Container port.
+- `VALKEY_PREDIXY_HOST_PORT`: Host port for the cluster proxy.
+- `VALKEY_STANDALONE_HOST_PORT`: Host port for the standalone instance.
+- `VALKEY_PASSWORD`: Authentication password.
 
-- **클러스터 접속**: `localhost:7617` (Predixy를 통해 접속)
-- **단독 접속**: `localhost:6379` (Standalone)
-- **비밀번호**: `VALKEY_PASSWORD` 환경 변수 사용.
-
-## 📦 볼륨 마운트
-
-- `valkey-node*-data-volume`: 클러스터 데이터
-- `valkey-standalone-data-volume`: 단독 인스턴스 데이터
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **Predixy**: 클라이언트가 클러스터를 지원하지 않아도 단일 엔드포인트처럼 사용할 수 있게 해줍니다.
+## Access
+- **Cluster (via Proxy)**: `localhost:${VALKEY_PREDIXY_HOST_PORT}`
+- **Standalone**: `localhost:${VALKEY_STANDALONE_HOST_PORT}`
+
+## Volumes
+- `valkey-node*-data-volume`: Data for cluster nodes.
+- `valkey-standalone-data-volume`: Data for standalone instance.

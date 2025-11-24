@@ -1,36 +1,36 @@
-# PostgreSQL HA Cluster (Patroni)
+# PostgreSQL HA (Patroni + Etcd + HAProxy)
 
-**PostgreSQL** 고가용성(HA) 클러스터입니다.
-**Patroni**를 사용하여 Failover를 관리하고, **Etcd**를 분산 저장소로 사용하며, **HAProxy**로 트래픽을 라우팅합니다.
+## Overview
+This directory contains the Docker Compose configuration for a High Availability PostgreSQL cluster using Patroni, Etcd, and HAProxy. It provides automatic failover and read/write splitting.
 
-## 🚀 서비스 구성
+## Services
+- **etcd-1, etcd-2, etcd-3**: Distributed key-value store for Patroni's cluster state.
+- **pg-0, pg-1, pg-2**: PostgreSQL nodes managed by Patroni (Spilo image).
+- **pg-router**: HAProxy for routing traffic to the primary (write) or replicas (read).
+- **pg-*-exporter**: Prometheus exporters for each Postgres node.
 
-| 서비스명 | 역할 | 포트 |
-| --- | --- | --- |
-| **pg-0, pg-1, pg-2** | PostgreSQL 데이터베이스 노드 (Spilo) | `5432` (내부) |
-| **etcd-1, etcd-2, etcd-3** | 분산 합의 저장소 (DCS) | `2379` |
-| **pg-router** | HAProxy (Writer/Reader 분기) | `5000` (Write), `5001` (Read), `8404` (Metrics) |
-| **pg-*-exporter** | 각 노드별 메트릭 Exporter | `9187` |
+## Prerequisites
+- Docker and Docker Compose installed.
+- A `.env` file in the `Docker/Infra` root directory.
 
-## 🛠 설정 및 환경 변수
+## Configuration
+The service relies on the following environment variables (defined in `.env`):
+- `POSTGRES_WRITE_HOST_PORT`: Host port for write operations (Primary).
+- `POSTGRES_READ_HOST_PORT`: Host port for read operations (Replicas).
+- `HAPROXY_HOST_PORT`: Host port for HAProxy stats.
+- `POSTGRES_PASSWORD`: Database password.
 
-- **접속 주소**:
-    - **Write (Primary)**: `localhost:5000`
-    - **Read (Replica)**: `localhost:5001` (Round Robin)
-- **이미지**: `ghcr.io/zalando/spilo-17:4.0-p3` (PostgreSQL 17)
-- **관리**: Patroni가 자동으로 리더 선출 및 복제를 관리합니다.
-
-## 📦 볼륨 마운트
-
-- `pg0-data`, `pg1-data`, `pg2-data`: 각 DB 노드 데이터
-- `etcd1-data`, `etcd2-data`, `etcd3-data`: Etcd 데이터
-
-## 🏃‍♂️ 실행 방법
-
+## Usage
+To start the services:
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
-## ⚠️ 주의사항
-- **초기화**: 첫 실행 시 리더 선출 과정으로 인해 접속까지 약간의 시간이 소요됩니다.
-- **비밀번호**: `.env.postgres` 파일 및 Docker Secret을 통해 관리됩니다.
+## Access
+- **Write Endpoint**: `localhost:${POSTGRES_WRITE_HOST_PORT}`
+- **Read Endpoint**: `localhost:${POSTGRES_READ_HOST_PORT}`
+- **HAProxy Stats**: `http://localhost:${HAPROXY_HOST_PORT}`
+
+## Volumes
+- `etcd*-data`: Persistent storage for Etcd.
+- `pg*-data`: Persistent storage for PostgreSQL data.

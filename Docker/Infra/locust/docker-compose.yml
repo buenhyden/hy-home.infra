@@ -1,0 +1,42 @@
+services:
+  locust-master:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${LOCUST_HOST_PORT}:${LOCUST_PORT}"
+    environment:
+      - LOCUST_INFLUXDB_HOST=influxdb
+      - LOCUST_INFLUXDB_PORT=${INFLUXDB_PORT}    
+      - LOCUST_INFLUXDB_ORG=${INFLUXDB_ORG}
+      - LOCUST_INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+      - LOCUST_INFLUXDB_TOKEN=${INFLUXDB_API_TOKEN}
+    volumes:
+      - locust-data:/mnt/locust    
+    networks:
+      - infra_net
+    command: -f /mnt/locust/locustfile.py --master
+    depends_on:
+      - influxdb
+    extra_hosts:
+      - "hy-home.local:host-gateway"
+  
+  locust-worker:
+    build: .
+    restart: unless-stopped
+    environment:
+      - LOCUST_INFLUXDB_HOST=influxdb
+      - LOCUST_INFLUXDB_PORT=${INFLUXDB_PORT}    
+      - LOCUST_INFLUXDB_ORG=${INFLUXDB_ORG}
+      - LOCUST_INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+      - LOCUST_INFLUXDB_TOKEN=${INFLUXDB_API_TOKEN}
+    volumes:
+      - locust-data:/mnt/locust    
+    networks:
+      - infra_net
+    command: -f /mnt/locust/locustfile.py --worker --master-host locust-master
+    depends_on:
+      - locust-master
+    deploy:
+      replicas: 2  # 워커를 2개로 늘려서 부하 분산 (필요시 조절)
+    extra_hosts:
+      - "hy-home.local:host-gateway"

@@ -1,0 +1,29 @@
+{
+  "name": "webcomponents-webpack",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@chromatic-com/storybook": "^1.9.0",
+    "@storybook/addon-essentials": "^8.3.2",
+    "@storybook/addon-links": "^8.3.2",
+    "@storybook/addon-webpack5-compiler-swc": "^1.0.5",
+    "@storybook/blocks": "^8.3.2",
+    "@storybook/test": "^8.3.2",
+    "@storybook/web-components": "^8.3.2",
+    "@storybook/web-components-webpack5": "^8.3.2",
+    "lit": "^3.2.0",
+    "storybook": "^8.3.2"
+  },
+  "dependencies": {
+    "webcomponents-webpack": "file:"
+  }
+}
