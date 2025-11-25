@@ -40,9 +40,27 @@ scrape_configs:
         labels:
           cluster: "pg-ha-cluster"
 
-  - job_name: "redis-cluster-exporter"
+  - job_name: "redis-cluster"
     static_configs:
-      - targets: ["redis-exporter:9121"]
+      - targets:
+          # 여기에 6개 노드의 주소를 모두 적습니다.
+          - redis://redis-node-0:6379
+          - redis://redis-node-1:6379
+          - redis://redis-node-2:6379
+          - redis://redis-node-3:6379
+          - redis://redis-node-4:6379
+          - redis://redis-node-5:6379
+    metrics_path: /scrape
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        target_label: addr
+      - target_label: __address__
+        # Docker Compose에서 실행 중인 Exporter의 서비스명:포트
+        replacement: redis-exporter:9121
 
   - job_name: "n8n-redis-exporter"
     static_configs:

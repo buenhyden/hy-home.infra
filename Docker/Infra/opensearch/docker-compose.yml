@@ -44,7 +44,7 @@ services:
       - "${ES_PERFORMANCE_ANALYZER_HOST_PORT}:${ES_PERFORMANCE_ANALYZER_PORT}"
     networks:
       infra_net:
-        ipv4_address: 172.19.0.30
+        ipv4_address: 172.19.0.44
     logging:
       driver: "json-file"
       options:
@@ -82,7 +82,7 @@ services:
   #     - "${ES_PERFORMANCE_ANALYZER_PORT}"
   #   networks:
   #     infra_net:
-  #       ipv4_address: 172.19.0.31
+  #       ipv4_address: 172.19.0.45
   #   logging:
   #     driver: "json-file"
   #     options:
@@ -120,7 +120,7 @@ services:
   #     - "${ES_PERFORMANCE_ANALYZER_PORT}"
   #   networks:
   #     infra_net:
-  #       ipv4_address: 172.19.0.32
+  #       ipv4_address: 172.19.0.46
   #   logging:
   #     driver: "json-file"
   #     options:
@@ -133,7 +133,7 @@ services:
     restart: unless-stopped
     networks:
       infra_net:
-        ipv4_address: 172.19.0.33
+        ipv4_address: 172.19.0.47
     expose:
       - "${KIBANA_PORT}" # Expose port 5601 for web access to OpenSearch Dashboards
     ports:
@@ -170,7 +170,7 @@ services:
       - "${ES_EXPORTER_HOST_PORT}:${ES_EXPORTER_PORT}" # 9114
     networks:
       infra_net:
-        ipv4_address: 172.19.0.34
+        ipv4_address: 172.19.0.48
     depends_on:
       - opensearch-node1
     logging:

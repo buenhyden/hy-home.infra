@@ -38,7 +38,8 @@ services:
     volumes:
       - n8n-data:/home/node/.n8n
     networks:
-      - infra_net
+      infra_net:
+        ipv4_address: 172.19.0.14
     depends_on:
       - pg-router # 루트 docker-compose에서 include 시 유효
     logging:
@@ -52,7 +53,8 @@ services:
     secrets:
       - redis_password
     networks:
-      - infra_net
+      infra_net:
+        ipv4_address: 172.19.0.15
     restart: unless-stopped    
     volumes:
       # 공통 redis.conf
@@ -89,7 +91,8 @@ services:
     expose:
       - "${REDIS_EXPORTER_PORT}"
     networks:
-      - infra_net
+      infra_net:
+        ipv4_address: 172.19.0.16
     restart: unless-stopped
     secrets:
       - redis_password    

@@ -21,17 +21,17 @@ secrets:
   minio_root_user:
     file: ../secrets/minio_root_user.txt
 
-include:  
+include:    
+  - influxdb/docker-compose.yml
   - kafka/docker-compose.yml
   - minio/docker-compose.yml
-  - observability/docker-compose.yml
-  - opensearch/docker-compose.yml
-  - redis-cluster/docker-compose.yml  
-  - postgresql/docker-compose.yml  
   - n8n/docker-compose.yml
-  - ollama/docker-compose.yml
-  - influxdb/docker-compose.yml
-  - locust/docker-compose.yml
+  - observability/docker-compose.yml
+  - ollama/docker-compose.yml  
+  - opensearch/docker-compose.yml  
+  - postgresql/docker-compose.yml    
+  - redis-cluster/docker-compose.yml    
+  # - locust/docker-compose.yml
   # - wikijs/docker-compose.yml
   # - airflow/docker-compose.yml
   # - loki/docker-compose.yml

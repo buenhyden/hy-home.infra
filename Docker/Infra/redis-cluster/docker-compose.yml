@@ -9,7 +9,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.50
+        ipv4_address: 172.19.0.60
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-0
@@ -51,7 +51,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.51
+        ipv4_address: 172.19.0.61
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-1
@@ -86,7 +86,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.52
+        ipv4_address: 172.19.0.62
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-2
@@ -121,7 +121,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.53
+        ipv4_address: 172.19.0.63
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-3
@@ -156,7 +156,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.54
+        ipv4_address: 172.19.0.64
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-4
@@ -191,7 +191,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.55
+        ipv4_address: 172.19.0.65
     restart: unless-stopped
     environment:
       NODE_NAME: redis-node-5
@@ -231,7 +231,7 @@ services:
       - redis_password
     networks:
       infra_net:
-        ipv4_address: 172.19.0.56
+        ipv4_address: 172.19.0.66
     restart: "no"
     depends_on:
       - redis-node-0
@@ -259,7 +259,7 @@ services:
       - "${REDIS_EXPORTER_HOST_PORT}:${REDIS_EXPORTER_PORT}"
     networks:
       infra_net:
-        ipv4_address: 172.19.0.57
+        ipv4_address: 172.19.0.67
     restart: unless-stopped
     secrets:
       - redis_password    
@@ -268,15 +268,17 @@ services:
       - -c
     command:
       - |
-        echo "Reading password from secret..."
-        export REDIS_PASSWORD=$(cat /run/secrets/redis_password | tr -d '\n')
+        echo "Loading Redis password..."
+        export R_PWD=$$(cat /run/secrets/redis_password | tr -d '\n')
         
-        echo "Starting Redis Exporter..."
-        # -redis.password-file 대신 -redis.password 사용
+        echo "Starting Exporter (Stateless Mode)..."
+        # [수정] -redis.addr 옵션을 제거하거나 비워둡니다.
+        # 이렇게 하면 Exporter는 단순히 대기 상태로 시작되며,
+        # Prometheus가 "어디를 긁어오라(Scrape)"고 시킬 때 작동합니다.
         exec /redis_exporter \
-          -redis.addr=redis://redis-node-0:6379,redis://redis-node-1:6379,redis://redis-node-2:6379,redis://redis-node-3:6379,redis://redis-node-4:6379,redis://redis-node-5:6379 \
-          -redis.password="$REDIS_PASSWORD" \
-          -web.listen-address=:${REDIS_EXPORTER_PORT} 
+          -redis.addr="redis://redis-node-0:6379" \
+          -redis.password="$$R_PWD" \
+          -web.listen-address=:${REDIS_EXPORTER_PORT}          
     depends_on: # healthcheck를 사용하므로 condition으로 변경 (더 안정적)
       redis-node-0: { condition: service_healthy }
       redis-node-1: { condition: service_healthy }
@@ -296,7 +298,7 @@ services:
     restart: unless-stopped
     networks:
       infra_net:
-        ipv4_address: 172.19.0.58
+        ipv4_address: 172.19.0.68
     ports:
       - "${REDIS_INSIGHT_HOST_PORT}:${REDIS_INSIGHT_PORT}" # 호스트에서 GUI 웹페이지에 접근할 포트
     volumes:

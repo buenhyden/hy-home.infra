@@ -20,7 +20,7 @@ services:
       - "${PROMETHEUS_HOST_PORT}:${PROMETHEUS_PORT}"
     networks:
       infra_net:
-        ipv4_address: 172.19.0.21
+        ipv4_address: 172.19.0.30
     restart: unless-stopped
   # -------------------------------------------------------
   # 2. Log Storage (Loki)
@@ -31,7 +31,7 @@ services:
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
       infra_net:
-        ipv4_address: 172.19.0.22
+        ipv4_address: 172.19.0.31
     ports:
       - "${LOKI_HOST_PORT}:${LOKI_PORT}"
     volumes:
@@ -50,7 +50,7 @@ services:
       - tempo-data:/var/tempo
     networks:
       infra_net:
-        ipv4_address: 172.19.0.23
+        ipv4_address: 172.19.0.32
     ports:
       - "${TEMPO_HOST_PORT}:${TEMPO_PORT}" # Tempo HTTP API (Grafana 연결용)
       # 4317 포트는 Alloy가 받아서 Tempo로 넘기므로 여기선 호스트에 노출 안 해도 됨 (내부 통신)
@@ -71,7 +71,7 @@ services:
       - grafana-data:/var/lib/grafana
     networks:
       infra_net:
-        ipv4_address: 172.19.0.24
+        ipv4_address: 172.19.0.33
     ports:
       - "${GRAFANA_HOST_PORT}:${GRAFANA_PORT}"
     depends_on:
@@ -98,7 +98,7 @@ services:
       - "${ALLOY_OTLP_HTTP_HOST_PORT}:${ALLOY_OTLP_HTTP_PORT}" # OTLP HTTP Receiver
     networks:
       infra_net:
-        ipv4_address: 172.19.0.25
+        ipv4_address: 172.19.0.34
     depends_on:
       - loki
       - prometheus
@@ -107,24 +107,36 @@ services:
   # 6. Container Metrics (cAdvisor)
   # -------------------------------------------------------
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:v0.52.0
     container_name: cadvisor
     hostname: cadvisor
     restart: unless-stopped
     privileged: true
+    # 윈도우(WSL2)에서는 kmsg 접근이 불안정할 수 있습니다. 
+    # 만약 실행이 안 되면 아래 devices 섹션을 주석 처리하세요.
     devices:
       - /dev/kmsg
     expose:
       - ${CADVISOR_PORT}    
     volumes:
+      # 호스트(VM)의 루트 파일시스템
       - /:/rootfs:ro
+      # Docker 소켓 및 런타임 정보 (필수)
       - /var/run:/var/run:ro
+      # 시스템 정보 (cgroup 등, 필수)
       - /sys:/sys:ro
+      # 도커 데이터 디렉터리
       - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
+      # 윈도우에서는 /dev/disk 매핑이 에러를 유발하므로 제거하는 것이 좋습니다.
+      # - /dev/disk/:/dev/disk:ro 
+      
+      # [추가] machine-id 에러 완화를 위한 시도
+      # 윈도우 Docker Desktop VM에 해당 파일이 없을 수도 있지만, 시도해볼 가치는 있습니다.
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
     networks:
       infra_net:
-        ipv4_address: 172.19.0.26
+        ipv4_address: 172.19.0.35
     logging:
       driver: "json-file"
       options:
@@ -144,7 +156,8 @@ services:
       - ./alertmanager/config.yml:/etc/alertmanager/config.yml
       - alertmanager-data:/alertmanager
     networks:
-      - infra_net
+      infra_net:
+        ipv4_address: 172.19.0.36
     ports:
       - "${ALERTMANAGER_HOST_PORT}:${ALERTMANAGER_PORT}"
     restart: unless-stopped

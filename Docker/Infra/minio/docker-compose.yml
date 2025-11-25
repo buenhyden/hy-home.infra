@@ -9,7 +9,7 @@ services:
       - "${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}" # Console
     networks:
       infra_net:
-        ipv4_address: 172.19.0.20
+        ipv4_address: 172.19.0.12
     volumes:
       - minio-data:/data
     healthcheck:
@@ -29,3 +29,4 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+  
