@@ -19,10 +19,12 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       # 컨트롤러 쿼럼 구성 (node_id@호스트:컨트롤러포트)
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093"
-      # 리스너 정의: client용 PLAINTEXT, controller용 CONTROLLER
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-      # 외부에서 접속할 때 광고할 주소
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:9092"
+      # 리스너 설정: 내부용(PLAINTEXT), 컨트롤러용(CONTROLLER), 외부용(EXTERNAL)
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-1:19092,CONTROLLER://kafka-1:9093,EXTERNAL://0.0.0.0:${KAFKA_CONTROLLER_PORT}"
+      # 광고 주소: 내부는 컨테이너명, 외부는 localhost
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:19092,EXTERNAL://localhost:${KAFKA_CONTROLLER_1_HOST_PORT}"
+      # 프로토콜 매핑
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
       # 컨트롤러 리스너 이름
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       # 브로커 간 통신에 쓸 리스너
@@ -74,8 +76,10 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093"
 
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-2:9092"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-2:19092,CONTROLLER://kafka-2:9093,EXTERNAL://0.0.0.0:${KAFKA_CONTROLLER_PORT}"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-2:19092,EXTERNAL://localhost:${KAFKA_CONTROLLER_2_HOST_PORT}"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
 
@@ -121,8 +125,10 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093"
 
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-3:9092"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-3:19092,CONTROLLER://kafka-3:9093,EXTERNAL://0.0.0.0:${KAFKA_CONTROLLER_PORT}"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-3:19092,EXTERNAL://localhost:${KAFKA_CONTROLLER_3_HOST_PORT}"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
 
@@ -166,19 +172,16 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:${SCHEMA_REGISTRY_PORT}"
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-1:9092,PLAINTEXT://kafka-2:9092,PLAINTEXT://kafka-3:9092"
-      # 기본 스키마 호환성 (필요에 따라 변경 가능)
+      # 내부 리스너 포트(19092)로 연결해야 함
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-1:19092,PLAINTEXT://kafka-2:19092,PLAINTEXT://kafka-3:19092"
     expose:
       - ${SCHEMA_REGISTRY_PORT}
     ports:
       - "${SCHEMA_REGISTRY_HOST_PORT}:${SCHEMA_REGISTRY_PORT}"
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy      
+      - kafka-1
+      - kafka-2
+      - kafka-3      
     logging:
       driver: "json-file"
       options:
@@ -193,21 +196,18 @@ services:
     container_name: kafka-connect
     restart: unless-stopped
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy      
+      - kafka-1
+      - kafka-2
+      - kafka-3
+      - schema-registry      
     networks:
       infra_net:
         ipv4_address: 172.19.0.24
     ports:
       - "${KAFKA_CONNECT_HOST_PORT}:${KAFKA_CONNECT_PORT}"
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+      # 내부 리스너 포트(19092) 사용
+      CONNECT_BOOTSTRAP_SERVERS: "kafka-1:19092,kafka-2:19092,kafka-3:19092"
       # Connect 클러스터 ID (그룹)
       CONNECT_GROUP_ID: "kafka-connect-cluster"
       # 내부 토픽들 (replication 3으로)
@@ -268,17 +268,14 @@ services:
     environment:
       KAFKA_REST_HOST_NAME: kafka-rest-proxy
       KAFKA_REST_LISTENERS: "http://0.0.0.0:${KAFKA_REST_PROXY_PORT}"
-      KAFKA_REST_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-1:9092,PLAINTEXT://kafka-2:9092,PLAINTEXT://kafka-3:9092"
+      # 내부 리스너 사용
+      KAFKA_REST_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-1:19092,PLAINTEXT://kafka-2:19092,PLAINTEXT://kafka-3:19092"
       KAFKA_REST_SCHEMA_REGISTRY_URL: "http://schema-registry:${SCHEMA_REGISTRY_PORT}"
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy      
+      - kafka-1
+      - kafka-2
+      - kafka-3
+      - schema-registry      
     logging:
       driver: "json-file"
       options:
@@ -296,7 +293,8 @@ services:
         ipv4_address: 172.19.0.26
     environment:
       KAFKA_CLUSTERS_0_NAME: ${KAFKA_CLSUTER_NAME}
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+      # 내부 리스너 사용
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka-1:19092,kafka-2:19092,kafka-3:19092"
       # UI가 Schema Registry에 접속하는 주소 (컨테이너 내부 통신)
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: "http://schema-registry:${SCHEMA_REGISTRY_PORT}"
       # UI가 Kafka Connect에 접속하는 주소 (컨테이너 내부 통신)
@@ -307,16 +305,11 @@ services:
     ports:
       - "${KAFKA_UI_HOST_PORT}:${KAFKA_UI_PORT}" # Host -> Container
     depends_on:
-      kafka-1:
-        condition: service_healthy
-      kafka-2:
-        condition: service_healthy
-      kafka-3:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
-      kafka-connect:
-        condition: service_healthy
+      - kafka-1
+      - kafka-2
+      - kafka-3
+      - schema-registry
+      - kafka-connect
     logging:
       driver: "json-file"
       options:
@@ -328,9 +321,10 @@ services:
     container_name: kafka-exporter
     restart: unless-stopped
     command:
-      - --kafka.server=kafka-1:9092
-      - --kafka.server=kafka-2:9092
-      - --kafka.server=kafka-3:9092
+      # 내부 리스너 사용
+      - --kafka.server=kafka-1:19092
+      - --kafka.server=kafka-2:19092
+      - --kafka.server=kafka-3:19092
     ports:
       - "${KAFKA_EXPORTER_HOST_PORT}:${KAFKA_EXPORTER_PORT}"
     networks:
