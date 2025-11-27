@@ -1,0 +1,204 @@
+services:
+  # -------------------------------------------------------
+  # 1. Metrics Storage (Prometheus)
+  # -------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.0.0
+    container_name: infra-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle' # 설정 리로드 허용
+      - '--web.enable-remote-write-receiver'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    # ports:
+    #   - "${PROMETHEUS_HOST_PORT}:${PROMETHEUS_PORT}"
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.30
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # 도메인: prometheus.hy-home.local
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DEFAULT_URL}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=${PROMETHEUS_PORT}"
+  # -------------------------------------------------------
+  # 2. Log Storage (Loki)
+  # -------------------------------------------------------
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: infra-loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.31
+    # ports:
+    #   - "${LOKI_HOST_PORT}:${LOKI_PORT}"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+  # -------------------------------------------------------
+  # 3. Trace Storage (Tempo)
+  # -------------------------------------------------------
+  tempo:
+    image: grafana/tempo:latest
+    container_name: infra-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.32
+    # ports:
+    #   - "${TEMPO_HOST_PORT}:${TEMPO_PORT}"      
+    restart: unless-stopped
+  # -------------------------------------------------------
+  # 4. Visualization (Grafana)
+  # -------------------------------------------------------
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: infra-grafana
+    environment:
+      - GF_SERVER_ROOT_URL=https://grafana.${DEFAULT_URL}
+      - GF_SERVER_DOMAIN=grafana.${DEFAULT_URL}
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=X-Auth-Request-Email
+      - GF_AUTH_PROXY_HEADER_PROPERTY=email
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      
+      # 일반 로그인 폼 숨기기 (SSO만 사용)
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      
+      # (선택) 자동 생성된 유저의 기본 권한 (Viewer, Editor, Admin)
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Editor
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}   
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+      - grafana-data:/var/lib/grafana      
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.33
+    # ports:
+    #   - "${GRAFANA_HOST_PORT}:${GRAFANA_PORT}"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # 도메인: grafana.hy-home.local
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DEFAULT_URL}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=${GRAFANA_PORT}"
+      - "traefik.http.routers.grafana.middlewares=sso-auth@file"
+  # -------------------------------------------------------
+  # 5. Telemetry Collector (Alloy)
+  # -------------------------------------------------------
+  alloy:
+    image: grafana/alloy:v1.11.3
+    container_name: infra-alloy
+    restart: unless-stopped
+    user: "0:0"
+    command: ["run", "--server.http.listen-addr=0.0.0.0:${ALLOY_PORT}","/etc/alloy/config.alloy"]
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro # 도커 로그 접근
+      - /var/run/docker.sock:/var/run/docker.sock:ro # 도커 메타데이터 접근    
+    # ports:
+    #   - "${ALLOY_HOST_PORT}:${ALLOY_PORT}"
+    #   - "${ALLOY_OTLP_GRPC_HOST_PORT}:${ALLOY_OTLP_GRPC_PORT}" # OTLP gRPC Receiver
+    #   - "${ALLOY_OTLP_HTTP_HOST_PORT}:${ALLOY_OTLP_HTTP_PORT}" # OTLP HTTP Receiver
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.34
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+    labels:
+      - "traefik.enable=true"
+      # Alloy UI: alloy.hy-home.local
+      - "traefik.http.routers.alloy.rule=Host(`alloy.${DEFAULT_URL}`)"
+      - "traefik.http.routers.alloy.entrypoints=websecure"
+      - "traefik.http.routers.alloy.tls=true"
+      - "traefik.http.services.alloy.loadbalancer.server.port=${ALLOY_PORT}"
+  # -------------------------------------------------------
+  # 6. Container Metrics (cAdvisor)
+  # -------------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.0
+    container_name: cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    # 윈도우(WSL2)에서는 kmsg 접근이 불안정할 수 있습니다. 
+    # 만약 실행이 안 되면 아래 devices 섹션을 주석 처리하세요.
+    devices:
+      - /dev/kmsg
+    expose:
+      - ${CADVISOR_PORT}    
+    volumes:
+      # 호스트(VM)의 루트 파일시스템
+      - /:/rootfs:ro
+      # Docker 소켓 및 런타임 정보 (필수)
+      - /var/run:/var/run:ro
+      # 시스템 정보 (cgroup 등, 필수)
+      - /sys:/sys:ro
+      # 도커 데이터 디렉터리
+      - /var/lib/docker/:/var/lib/docker:ro
+      # 윈도우에서는 /dev/disk 매핑이 에러를 유발하므로 제거하는 것이 좋습니다.
+      # - /dev/disk/:/dev/disk:ro 
+      
+      # [추가] machine-id 에러 완화를 위한 시도
+      # 윈도우 Docker Desktop VM에 해당 파일이 없을 수도 있지만, 시도해볼 가치는 있습니다.
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.35
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: infra-alertmanager
+    environment:
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SLACK_ALERTMANAGER_WEBHOOK_URL=${SLACK_ALERTMANAGER_WEBHOOK_URL}
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'      
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml
+      - alertmanager-data:/alertmanager
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.36
+    # ports:
+    #   - "${ALERTMANAGER_HOST_PORT}:${ALERTMANAGER_PORT}"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # Alertmanager UI: alertmanager.hy-home.local
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${DEFAULT_URL}`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls=true"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=${ALERTMANAGER_PORT}"

@@ -1,0 +1,58 @@
+# traefik.yml
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# 1. EntryPoints 설정
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    http:
+      tls: true
+  metrics:
+    address: ":8082"
+
+# 2. Providers 설정
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: infra_net
+  file:
+    # 특정 파일 하나만 지정하기보다 폴더를 지정하면 확장에 유리합니다.
+    directory: /dynamic
+    watch: true
+
+# 3. API & Dashboard
+api:
+  dashboard: true
+  insecure: false
+
+# 4. Observability (Logs & Metrics)
+log:
+  level: INFO
+
+accessLog: {}
+
+ping:
+  entryPoint: metrics
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addRoutersLabels: true
+    addServicesLabels: true
+
+# 5. Transport (Root CA)
+serversTransport:
+  rootCAs:
+    - /certs/rootCA.pem

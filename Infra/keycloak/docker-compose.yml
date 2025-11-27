@@ -1,0 +1,42 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.6
+    container_name: keycloak
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      TZ: ${DEFAULT_TIMEZONE} # Asia/Seoul
+      KC_DB: ${KEYCLOAK_DATABASE}
+      KC_DB_URL: jdbc:postgresql://${POSTGRES_HOSTNAME}:${POSTGRES_WRITE_PORT}/${KEYCLOAK_DBNAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: https://keycloak.${DEFAULT_URL}
+      KC_PROXY_HEADERS: xforwarded
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.${DEFAULT_URL}`)"
+      - "traefik.http.routers.keycloak.entrypoints=websecure"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+    networks:
+      - infra_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    restart: unless-stopped
+    # SMTP 포트(1025)는 내부용, UI 포트(8025)는 Traefik으로 노출
+    networks:
+      - infra_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailhog.rule=Host(`mail.${DEFAULT_URL}`)" # 메일함 접속 주소
+      - "traefik.http.routers.mailhog.entrypoints=websecure"
+      - "traefik.http.routers.mailhog.tls=true"
+      - "traefik.http.services.mailhog.loadbalancer.server.port=${MAILHOG_UI_PORT}"

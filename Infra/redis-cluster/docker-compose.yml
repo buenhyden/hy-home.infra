@@ -1,0 +1,321 @@
+services:
+  ###############################################################
+  # Redis Cluster Nodes (6개: 3 master + 3 replica)
+  ###############################################################
+  redis-node-0:
+    image: redis:8.2.3-bookworm # Redis 8.2.x
+    container_name: redis-node-0
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.60
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-0
+    volumes:
+      # 공통 redis.conf
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      # 데이터 영속화
+      - redis-data-0:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    # 클러스터 내부 통신 포트는 expose
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    # 호스트에서 디버깅/개발용으로 6379는 0번 노드만 오픈
+    ports:
+      - "${REDIS_HOST_PORT}:${REDIS_PORT}"
+    healthcheck:
+      # secret 파일에서 비밀번호 읽어서 PING 체크
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-node-1:
+    image: redis:8.2.3-bookworm
+    container_name: redis-node-1
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.61
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-1
+    volumes:
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      - redis-data-1:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-node-2:
+    image: redis:8.2.3-bookworm
+    container_name: redis-node-2
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.62
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-2
+    volumes:
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      - redis-data-2:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-node-3:
+    image: redis:8.2.3-bookworm
+    container_name: redis-node-3
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.63
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-3
+    volumes:
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      - redis-data-3:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-node-4:
+    image: redis:8.2.3-bookworm
+    container_name: redis-node-4
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.64
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-4
+    volumes:
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      - redis-data-4:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redis-node-5:
+    image: redis:8.2.3-bookworm
+    container_name: redis-node-5
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.65
+    restart: unless-stopped
+    environment:
+      NODE_NAME: redis-node-5
+    volumes:
+      - ./conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./scripts/redis-start.sh:/usr/local/bin/redis-start.sh:ro
+      - redis-data-5:/data
+    command: ["sh", "/usr/local/bin/redis-start.sh"]
+    expose:
+      - "${REDIS_PORT}"
+      - "${REDIS_BUS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDIS_PASSWORD=$(cat /run/secrets/redis_password); redis-cli -a
+          $REDIS_PASSWORD -h 127.0.0.1 -p 6379 ping | grep PONG",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  ###############################################################
+  # Redis Cluster 초기화용 one-shot 컨테이너
+  #   - 처음 한 번 실행해서 cluster create
+  #   - 이미 클러스터 구성돼 있으면 noop로 끝나도록 스크립트 작성
+  ###############################################################
+  redis-cluster-init:
+    image: redis:8.2
+    container_name: redis-cluster-init
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.66
+    restart: "no"
+    depends_on:
+      - redis-node-0
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-node-4
+      - redis-node-5
+    volumes:
+      - ./scripts/redis-cluster-init.sh:/usr/local/bin/redis-cluster-init.sh:ro
+    command: ["sh", "/usr/local/bin/redis-cluster-init.sh"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+  ###############################################################
+  # Redis Exporter – Prometheus용 메트릭
+  ###############################################################
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.80.0-alpine
+    container_name: redis-exporter
+    ports:
+      - "${REDIS_EXPORTER_HOST_PORT}:${REDIS_EXPORTER_PORT}"
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.67
+    restart: unless-stopped
+    secrets:
+      - redis_password    
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        echo "Loading Redis password..."
+        export R_PWD=$$(cat /run/secrets/redis_password | tr -d '\n')
+        
+        echo "Starting Exporter (Stateless Mode)..."
+        # [수정] -redis.addr 옵션을 제거하거나 비워둡니다.
+        # 이렇게 하면 Exporter는 단순히 대기 상태로 시작되며,
+        # Prometheus가 "어디를 긁어오라(Scrape)"고 시킬 때 작동합니다.
+        exec /redis_exporter \
+          -redis.addr="redis://redis-node-0:6379" \
+          -redis.password="$$R_PWD" \
+          -web.listen-address=:${REDIS_EXPORTER_PORT}          
+    depends_on: # healthcheck를 사용하므로 condition으로 변경 (더 안정적)
+      redis-node-0: { condition: service_healthy }
+      redis-node-1: { condition: service_healthy }
+      redis-node-2: { condition: service_healthy }
+      redis-node-3: { condition: service_healthy }
+      redis-node-4: { condition: service_healthy }
+      redis-node-5: { condition: service_healthy }
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    restart: unless-stopped
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.68
+    # ports:
+    #   - "${REDIS_INSIGHT_HOST_PORT}:${REDIS_INSIGHT_PORT}" # 호스트에서 GUI 웹페이지에 접근할 포트
+    volumes:
+      - redisinsight-data:/db
+    labels:
+      - "traefik.enable=true"
+      # 도메인: redisinsight.hy-home.local
+      - "traefik.http.routers.redisinsight.rule=Host(`redisinsight.${DEFAULT_URL}`)"
+      - "traefik.http.routers.redisinsight.entrypoints=websecure"
+      - "traefik.http.routers.redisinsight.tls=true"
+      # Keycloak 인증 미들웨어 적용 (이 한 줄로 보안 적용 끝)
+      - "traefik.http.routers.redisinsight.middlewares=sso-auth@file"
+      # [중요] RedisInsight 기본 포트 5540 (또는 8001) 확인 필요
+      # 최신 이미지는 보통 5540을 사용합니다.
+      - "traefik.http.services.redisinsight.loadbalancer.server.port=${REDIS_INSIGHT_PORT}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
