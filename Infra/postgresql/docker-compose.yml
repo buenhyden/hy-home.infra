@@ -100,7 +100,7 @@ services:
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-0:${POSTGRES_PORT}
     volumes:
-      - pg0-data:/home/postgres/pgdata
+      - pg0-data:/home/postgres/pgdata      
     expose:
       - ${POSTGRES_PORT}
     networks:
@@ -135,7 +135,7 @@ services:
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:${POSTGRES_PORT}
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-1:${POSTGRES_PORT}      
     volumes:
-      - pg1-data:/home/postgres/pgdata
+      - pg1-data:/home/postgres/pgdata      
     networks:
       infra_net:
         ipv4_address: 172.19.0.54
@@ -172,7 +172,7 @@ services:
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: pg-2:${POSTGRES_PORT}     
       
     volumes:
-      - pg2-data:/home/postgres/pgdata
+      - pg2-data:/home/postgres/pgdata      
     networks:
       infra_net:
         ipv4_address: 172.19.0.55
@@ -236,7 +236,7 @@ services:
       - |
         export PGPASSWORD=$$(cat /run/secrets/postgres_password | tr -d '\n')
         # pg-0에 직접 접속
-        export DATA_SOURCE_NAME="postgresql://postgres:$$PGPASSWORD@pg-2:5432/postgres?sslmode=require"
+        export DATA_SOURCE_NAME="postgresql://postgres:$$PGPASSWORD@pg-0:5432/postgres?sslmode=require"
         exec /bin/postgres_exporter
     restart: unless-stopped
     healthcheck:
@@ -261,7 +261,7 @@ services:
       - |
         export PGPASSWORD=$$(cat /run/secrets/postgres_password | tr -d '\n')
         # pg-0에 직접 접속
-        export DATA_SOURCE_NAME="postgresql://postgres:$$PGPASSWORD@pg-2:5432/postgres?sslmode=require"
+        export DATA_SOURCE_NAME="postgresql://postgres:$$PGPASSWORD@pg-1:5432/postgres?sslmode=require"
         exec /bin/postgres_exporter
     restart: unless-stopped
     healthcheck:

@@ -1,11 +1,3 @@
-# Use root/example as user/password credentials
-
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-
 services:
   cassandra-exporter:
     image: bitnami/cassandra-exporter:latest
@@ -22,9 +14,11 @@ services:
       - nt-databases
       - nt-observability
       - nt-webserver
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
     volumes:
       - cassandra-exporter-volume:/opt/bitnami/cassandra-exporter/conf
     command: java -jar ./cassandra_exporter.jar ./conf/config.yml
@@ -42,9 +36,12 @@ services:
       - ${CASSANDRA_CLIENT_PORT}
     networks:
       - nt-databases
-    logging: *logging
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
+    environment:      
       - CASSANDRA_SEEDS=cassandra-node1
       # - CASSANDRA_SEEDS=cassandra-node1,cassandra-node2
       # - CASSANDRA_CLUSTER_NAME=cassandra-cluster
@@ -69,10 +66,9 @@ services:
   #     - ${CASSANDRA_INTER_NODE_PORT}
   #     - ${CASSANDRA_CLIENT_PORT}
   #   networks:
-  #     - nt-databases
-  #   logging: *logging
+  #     - nt-databases  
   #   environment:
-  #     - TZ=${DEFAULT_TIMEZONE}
+  #     
   #     - CASSANDRA_SEEDS=cassandra-node1,cassandra-node2
   #     - CASSANDRA_CLUSTER_NAME=cassandra-cluster
   #     - CASSANDRA_PASSWORD_SEEDER=yes

@@ -102,3 +102,9 @@ scrape_configs:
   - job_name: "haproxy"
     static_configs:
       - targets: ["pg-router:8404"] # 도커 내부 통신
+  
+  - job_name: 'keycloak'    
+    metrics_path: /metrics
+    scheme: http
+    static_configs:      
+      - targets: ['keycloak:9000']

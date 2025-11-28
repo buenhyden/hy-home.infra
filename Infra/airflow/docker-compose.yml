@@ -6,8 +6,7 @@ x-airflow-common: &airflow-common
   networks:
     - infra_net
   # build: .
-  environment: &airflow-common-env
-    TZ: ${DEFAULT_TIMEZONE}
+  environment: &airflow-common-env    
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/airflow"

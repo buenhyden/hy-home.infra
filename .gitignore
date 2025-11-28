@@ -4,6 +4,8 @@ Infisical Emergency Kit.pdf
 Doc/클라우드_취약점_점검_가이드.pdf
 secrets/
 Infra/.env
+Infra/postgresql/init_users_dbs.sql
+Infra/oauth2-proxy/certs/
 Infra/traefik/certs/
 Infra/traefik/oauth2-proxy.cfg
 Infra/traefik/dynamic/

@@ -52,6 +52,20 @@ metrics:
     addRoutersLabels: true
     addServicesLabels: true
 
+tracing:
+  # Grafana에서 보여질 서비스 이름
+  serviceName: "traefik-gateway"
+  otlp:
+    # Grafana Tempo (또는 Alloy)가 gRPC를 수신하는 주소
+    grpc:
+      endpoint: "tempo:4317" # Docker Service Name:Port
+      insecure: true # 내부 통신이므로 TLS 비활성화 (필수)
+
+    # [선택사항] 샘플링 비율 (0.0 ~ 1.0)
+    # 1.0 = 모든 요청 기록 (개발용 추천)
+    # 0.1 = 10%만 기록 (운영용 추천)
+    # sampleRate: 1.0
+
 # 5. Transport (Root CA)
 serversTransport:
   rootCAs:

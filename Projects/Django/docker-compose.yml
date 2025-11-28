@@ -1,9 +1,3 @@
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-
 services:
   django:
     build:
@@ -26,7 +20,11 @@ services:
     tty: true #docker run -t
     volumes:
       - django-volume:/app:rw
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
 volumes:
   django-volume:

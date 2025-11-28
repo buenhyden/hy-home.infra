@@ -36,7 +36,8 @@ include:
   - postgresql/docker-compose.yml    
   - redis-cluster/docker-compose.yml  
   - traefik/docker-compose.yml
-  - nginx/docker-compose.yml
+  # - nginx/docker-compose.yml
+  - oauth2-proxy/docker-compose.yml
   - keycloak/docker-compose.yml
   # - locust/docker-compose.yml
   # - wikijs/docker-compose.yml

@@ -1,9 +1,3 @@
-x-default-logging: &logging
-  driver: 'json-file'
-  options:
-    max-size: '5m'
-    max-file: '2'
-    
 networks:
   nt-projects:
     name: nt-projects
@@ -40,7 +34,11 @@ services:
     volumes:
       - default-nextjs-volume:/project:rw
       - resource-volume:/resources:rw
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
 volumes:
   default-nextjs-volume:

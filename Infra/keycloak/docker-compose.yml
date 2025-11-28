@@ -4,8 +4,9 @@ services:
     container_name: keycloak
     restart: unless-stopped
     command: start-dev
-    environment:
-      TZ: ${DEFAULT_TIMEZONE} # Asia/Seoul
+    expose:
+      - ${KEYCLOAK_MANAGEMENT_PORT}
+    environment:      
       KC_DB: ${KEYCLOAK_DATABASE}
       KC_DB_URL: jdbc:postgresql://${POSTGRES_HOSTNAME}:${POSTGRES_WRITE_PORT}/${KEYCLOAK_DBNAME}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
@@ -14,6 +15,17 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HOSTNAME: https://keycloak.${DEFAULT_URL}
       KC_PROXY_HEADERS: xforwarded
+      # DB 연결이 끊겼는지 확인하고, 오래된 연결을 자동으로 정리합니다.
+      KC_DB_POOL_INITIAL_SIZE: 1
+      KC_DB_POOL_MIN_SIZE: 1
+      KC_DB_POOL_MAX_SIZE: 10
+      KC_METRICS_ENABLED: true
+      KC_HEALTH_ENABLED: true
+
+      # Java 옵션을 통해 Quarkus(Agroal)의 유효성 검사 강제 설정
+      # 1. idle 상태가 5분 지나면 연결 끊음 (DB 타임아웃보다 짧게)
+      # 2. 연결 가져올 때 유효성 검사 수행 (background)
+      JAVA_OPTS_APPEND: "-Dquarkus.datasource.jdbc.idle-removal-interval=5M -Dquarkus.datasource.jdbc.background-validation-interval=1M"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.keycloak.rule=Host(`keycloak.${DEFAULT_URL}`)"

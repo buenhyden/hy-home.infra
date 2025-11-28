@@ -1,9 +1,3 @@
-x-default-logging: &logging
-  driver: 'json-file'
-  options:
-    max-size: '5m'
-    max-file: '2'
- 
 services:
   default-reactjs:
     build:
@@ -28,4 +22,8 @@ services:
     tty: true #docker run -t
     volumes:
       - reactjs-volume:/app:rw      
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 

@@ -28,8 +28,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - nt-databases
-    logging: *logging
+      - nt-databases    
   mongodb-rep2:
     image: mongo:latest
     restart: unless-stopped
@@ -59,8 +58,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - nt-databases
-    logging: *logging
+      - nt-databases    
   mongo-express:
     image: mongo-express:latest
     container_name: mongo-express
@@ -92,8 +90,7 @@ services:
       - nt-databases
     depends_on:
       - mongodb-rep1
-      - mongodb-rep2
-    logging: *logging
+      - mongodb-rep2    
 
   mongodb-exporter:
     image: percona/mongodb_exporter:0.40.0
@@ -107,8 +104,7 @@ services:
       - mongodb-rep1
       - mongodb-rep2
     networks:
-      - nt-databases
-    logging: *logging
+      - nt-databases    
 
 volumes:
   replicaset-1-mongo-conf-volume:

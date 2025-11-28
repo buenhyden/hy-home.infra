@@ -1,9 +1,3 @@
-x-default-logging: &logging
-  driver: 'json-file'
-  options:
-    max-size: '5m'
-    max-file: '2'
-
 services:
   default-spring-maven:
     build:
@@ -29,7 +23,11 @@ services:
     volumes:
       - default-spring-maven-volume:/project:rw
       - resource-volume:/resources:rw
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
 volumes:
   default-spring-maven-volume:

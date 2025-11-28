@@ -51,7 +51,7 @@ services:
   tempo:
     image: grafana/tempo:latest
     container_name: infra-tempo
-    command: [ "-config.file=/etc/tempo.yaml" ]
+    command: [ "-config.file=/etc/tempo.yaml" ] 
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
       - tempo-data:/var/tempo
@@ -67,22 +67,60 @@ services:
   grafana:
     image: grafana/grafana:12.3.0
     container_name: infra-grafana
-    environment:
+    environment:      
       - GF_SERVER_ROOT_URL=https://grafana.${DEFAULT_URL}
       - GF_SERVER_DOMAIN=grafana.${DEFAULT_URL}
-      - GF_AUTH_PROXY_ENABLED=true
-      - GF_AUTH_PROXY_HEADER_NAME=X-Auth-Request-Email
-      - GF_AUTH_PROXY_HEADER_PROPERTY=email
-      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
-      
-      # 일반 로그인 폼 숨기기 (SSO만 사용)
+
+      # OAuth 자동 로그인 활성화
+      # true로 설정하면, 접속 시 로그인 화면을 건너뛰고 바로 Keycloak 인증을 시도합니다.
+      - GF_AUTH_OAUTH_AUTO_LOGIN=true
+
+      # Grafana 기본 로그인 폼 숨기기
+      # ID/PW 입력창을 없애고 오직 OAuth(Keycloak)만 사용하게 강제합니다.
       - GF_AUTH_DISABLE_LOGIN_FORM=true
-      
+
+      # [2] 보안 및 기본 관리자 계정 (초기 세팅용)
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false          # 일반 회원가입 비활성화 (OAuth로만 가입)
       # (선택) 자동 생성된 유저의 기본 권한 (Viewer, Editor, Admin)
       - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Editor
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USERNAME}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}   
-      - GF_USERS_ALLOW_SIGN_UP=false
+
+      # [3] Keycloak OAuth2 연동 (Generic OAuth)
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true  # Keycloak 인증 성공 시 Grafana 유저 자동 생성
+
+      # Keycloak 클라이언트 정보 (.env 파일에 변수 정의 필요)
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=${OAUTH2_PROXY_CLIENT_ID}      # 예: nginx-client
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}      
+      
+      # Scopes: 'groups'가 반드시 포함되어야 함 (Client Scope 설정 필요)
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email groups
+
+      # [해결책] 내부 통신(Token Exchange) 시 사설 인증서 에러 무시
+      - GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE=true
+      
+      # Keycloak Endpoints (Realm 이름이 'myrealm'인 경우의 예시, 변수화 추천)
+      # ${KEYCLOAK_REALM} 부분은 본인의 Realm 이름으로 변경하세요.
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://keycloak.${DEFAULT_URL}/realms/hy-home.realm/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=https://keycloak.${DEFAULT_URL}/realms/hy-home.realm/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=https://keycloak.${DEFAULT_URL}/realms/hy-home.realm/protocol/openid-connect/userinfo
+      # 로그아웃 리다이렉트 (필수)
+      # Grafana에서 로그아웃하면 Keycloak 세션도 같이 끊어주거나, 다시 로그인 화면으로 보내야 합니다.
+      # 아래 URL은 Keycloak의 로그아웃 엔드포인트입니다.
+      # post_logout_redirect_uri는 로그아웃 후 다시 돌아올 주소입니다.
+      - GF_AUTH_SIGNOUT_REDIRECT_URL=https://keycloak.${DEFAULT_URL}/realms/hy-home.realm/protocol/openid-connect/logout?post_logout_redirect_uri=https://grafana.${DEFAULT_URL}/login
+      
+      # 권한 매핑 (Role Mapping) - 핵심
+      # Keycloak의 'groups' 정보를 읽어서 Grafana 권한(Admin/Editor/Viewer)으로 변환
+      # 로직: groups 배열에 '/admin'이 있으면 'Admin', 아니면 'Viewer' 부여
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(groups[*], '/admin') && 'Admin' || 'Viewer'
+
+      # (옵션) '/admin' 그룹 유저에게 Grafana 전체 서버 관리자(Super Admin) 권한까지 부여하려면 true
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN=true
+      - GF_AUTH_GENERIC_OAUTH_GRAFANA_ADMIN_ATTRIBUTE_PATH=contains(groups[*], '/admin')
+      # [5] 기타 기능 설정
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -113,7 +151,7 @@ services:
     image: grafana/alloy:v1.11.3
     container_name: infra-alloy
     restart: unless-stopped
-    user: "0:0"
+    user: "0:0"      
     command: ["run", "--server.http.listen-addr=0.0.0.0:${ALLOY_PORT}","/etc/alloy/config.alloy"]
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
@@ -147,7 +185,7 @@ services:
     restart: unless-stopped
     privileged: true
     # 윈도우(WSL2)에서는 kmsg 접근이 불안정할 수 있습니다. 
-    # 만약 실행이 안 되면 아래 devices 섹션을 주석 처리하세요.
+    # 만약 실행이 안 되면 아래 devices 섹션을 주석 처리하세요.    
     devices:
       - /dev/kmsg
     expose:
@@ -179,7 +217,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: infra-alertmanager
-    environment:
+    environment:      
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SLACK_ALERTMANAGER_WEBHOOK_URL=${SLACK_ALERTMANAGER_WEBHOOK_URL}

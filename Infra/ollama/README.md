@@ -57,7 +57,7 @@ docker exec -it ollama ollama pull mxbai-embed-large:latest
 #### VLM
 
 ```bash
-docker exec -it ollama ollama pull Moondream:latest      
+docker exec -it ollama ollama pull Moondream:latest
 docker exec -it ollama ollama pull minicpm-v:8b 
 docker exec -it ollama ollama pull qwen3-vl:8b
 ```

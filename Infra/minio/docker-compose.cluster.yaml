@@ -1,10 +1,3 @@
-version: "3.7"
-
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
 # Settings and configurations that are common for all containers
 x-minio-common: &minio-common
   image: quay.io/minio/minio:latest
@@ -22,9 +15,13 @@ x-minio-common: &minio-common
     - nt-storage
     - nt-webserver
     - nt-observability
-  logging: *logging
+  logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
   environment:
-    - TZ=${DEFAULT_TIMEZONE}
+    
     - MINIO_ROOT_USER=${DEFAULT_USERNAME}
     - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
 
@@ -75,7 +72,7 @@ services:
   #     - minio3
   #     - minio4
   #   environment:
-  #     - TZ=${DEFAULT_TIMEZONE}
+  #     
   # ######################################################################################
 
 ## By default this config uses default local driver,

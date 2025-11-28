@@ -12,6 +12,7 @@ services:
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
       MINIO_PROMETHEUS_AUTH_TYPE: "public"
       MINIO_API_ROOT_ACCESS: "on"    
+      #MINIO_BROWSER_REDIRECT_URL: "https://${DEFAULT_URL}/minio-console/"
     # ports:
     #   - "${MINIO_HOST_PORT}:${MINIO_PORT}" # S3 API
     #   - "${MINIO_CONSOLE_HOST_PORT}:${MINIO_CONSOLE_PORT}" # Console

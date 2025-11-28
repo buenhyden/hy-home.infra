@@ -6,11 +6,9 @@ services:
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped    
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}    
     ports:
-      - ${TRAEFIK_HTTP_HOST_PORT}:${TRAEFIK_HTTP_PORT}
-      - ${TRAEFIK_HTTPS_HOST_PORT}:${TRAEFIK_HTTPS_PORT}
+      - ${HTTP_HOST_PORT}:${HTTP_PORT}
+      - ${HTTPS_HOST_PORT}:${HTTPS_PORT}
       - ${TRAEFIK_DASHBOARD_HOST_PORT}:${TRAEFIK_DASHBOARD_PORT}
       - ${TRAEFIK_METRICS_HOST_PORT}:${TRAEFIK_METRICS_PORT}    
     volumes:
@@ -47,46 +45,13 @@ services:
       driver: 'json-file'
       options:
         max-size: '5m'
-        max-file: '2'
-  oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.13.0
-    container_name: oauth2-proxy
-    restart: unless-stopped
-    # [1] 설정 파일 로드 명령
-    command: --config /etc/oauth2-proxy.cfg
-    environment:
-      - TZ=Asia/Seoul
-      
-      # [2] 시스템 레벨 환경 변수 (설정 파일로 대체 불가)
-      # SSL 인증서 로드는 앱 로직 이전에 Go 언어 런타임에서 처리하므로 Env에 있어야 함
-      - SSL_CERT_FILE=/etc/ssl/certs/rootCA.pem
-      
-    volumes:
-      # 호스트의 mkcert RootCA를 컨테이너 내부로 주입
-      - ./oauth2-proxy.cfg:/etc/oauth2-proxy.cfg:ro
-      - ./certs/rootCA.pem:/etc/ssl/certs/rootCA.pem:ro
-    extra_hosts:
-      - "keycloak.${DEFAULT_URL}:host-gateway"
-      - "auth.${DEFAULT_URL}:host-gateway"
-    labels:
-      - "traefik.enable=true"
-      # OAuth2 콜백 처리를 위한 라우터
-      - "traefik.http.routers.oauth2-proxy.rule=Host(`auth.${DEFAULT_URL}`)"
-      - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
-      - "traefik.http.routers.oauth2-proxy.tls=true"
-      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=${OAUTH2_PROXY_PORT}"
-      
-    networks:
-      - infra_net
-    logging: 
-      driver: 'json-file'
-      options:
-        max-size: '5m'
-        max-file: '2'
+        max-file: '2'  
   # whoami:
   #   image: traefik/whoami
   #   container_name: whoami
   #   restart: unless-stopped
+  #   environment:
+  #      # Asia/Seoul
   #   networks:
   #     - infra_net
   #   labels:

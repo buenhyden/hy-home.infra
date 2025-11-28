@@ -1,12 +1,3 @@
-# Use root/example as user/password credentials
-version: "3.9"
-
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-
 services:
   syncthing:
     image: syncthing/syncthing:latest
@@ -22,7 +13,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=${DEFAULT_TIMEZONE}
+      
       - FILE__USER=${SYNCTHING_USERNAME}
       - FILE__PASSWORD=${SYNCTHING_PASSWORD}
     volumes:
@@ -38,6 +29,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
     # labels:
     #   - traefik.enable=true
     #   - traefik.docker.network=nt-develop
@@ -53,8 +49,7 @@ services:
     networks:
       - nt-sync
       - nt-webserver
-      - nt-observability
-    logging: *logging
+      - nt-observability    
   # ######################################################################################
 
 volumes:

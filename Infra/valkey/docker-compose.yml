@@ -1,12 +1,3 @@
-# Use root/example as user/password credentials
-version: "3.9"
-
-x-default-logging: &logging
-  driver: "json-file"
-  options:
-    max-size: "5m"
-    max-file: "2"
-
 services:
   valkey-predixy:
     image: haandol/predixy:latest
@@ -21,15 +12,17 @@ services:
       - ${VALKEY_PREDIXY_PORT}
     ports:
       - "${VALKEY_PREDIXY_HOST_PORT}:${VALKEY_PREDIXY_PORT}"
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
     depends_on:
       - valkey-node-1
       - valkey-node-2
       - valkey-node-3
     networks:
       - nt-databases
-    logging: *logging
+    logging: 
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   valkey-cluster-exporter:
     image: oliver006/redis_exporter:latest
@@ -42,8 +35,6 @@ services:
       - "--redis.password=${VALKEY_PASSWORD}"
       - "--is-cluster"
     # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
     depends_on:
       - valkey-node-1
       - valkey-node-2
@@ -51,7 +42,11 @@ services:
     networks:
       - nt-databases
       - nt-observability
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
   valkey-node-1:
     image: docker.io/bitnami/valkey-cluster:latest
@@ -64,8 +59,7 @@ services:
     #   - '${VALKEY_CLUSTER_HOST_PORT}:${VALKEY_PORT}'
     expose:
       - ${VALKEY_PORT}
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
+    environment:      
       # - REDIS_REPLICATION_MODE=master
       - VALKEY_PASSWORD=${VALKEY_PASSWORD}
       # - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
@@ -79,7 +73,11 @@ services:
     depends_on:
       - valkey-node-2
       - valkey-node-3
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
   valkey-node-2:
     image: docker.io/bitnami/valkey-cluster:latest
@@ -90,14 +88,17 @@ services:
       - valkey-node2-data-volume:/bitnami/valkey/data
     expose:
       - ${VALKEY_PORT}
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
+    environment:      
       - VALKEY_PASSWORD=${VALKEY_PASSWORD}
       - "VALKEY_NODES=valkey-node-1 valkey-node-2 valkey-node-3"
     networks:
       - nt-databases
       - nt-webserver
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
   valkey-node-3:
     image: docker.io/bitnami/valkey-cluster:latest
@@ -108,14 +109,17 @@ services:
       - valkey-node3-data-volume:/bitnami/valkey/data
     expose:
       - ${VALKEY_PORT}
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
+    environment:      
       - VALKEY_PASSWORD=${VALKEY_PASSWORD}
       - "VALKEY_NODES=valkey-node-1 valkey-node-2 valkey-node-3"
     networks:
       - nt-databases
       - nt-webserver
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
 
   valkey-standalone:
     image: docker.io/bitnami/valkey:latest
@@ -129,9 +133,12 @@ services:
     networks:
       - nt-databases
       - nt-webserver
-    logging: *logging
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
+    environment:      
       - VALKEY_PASSWORD=${VALKEY_PASSWORD}
     volumes:
       - valkey-standalone-data-volume:/bitnami/valkey/data
@@ -145,14 +152,16 @@ services:
       - "--redis.addr=redis://valkey-node1:${VALKEY_PORT}"
       - "--redis.password=${VALKEY_PASSWORD}"
     # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
-    environment:
-      - TZ=${DEFAULT_TIMEZONE}
     depends_on:
       - valkey-standalone
     networks:
       - nt-databases
       - nt-observability
-    logging: *logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2" 
   # ######################################################################################
 
 volumes:
