@@ -58,9 +58,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -77,12 +75,12 @@
           },
           "editorMode": "code",
           "expr": "n8n_active_workflow_count",
-          "legendFormat": "__auto",
+          "legendFormat": "총 활성",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Active Workflows (활성 상태)",
+      "title": "Active Workflows (활성 워크플로우 수)",
       "type": "stat"
     },
     {
@@ -123,9 +121,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -142,12 +138,12 @@
           },
           "editorMode": "code",
           "expr": "time() - n8n_process_start_time_seconds",
-          "legendFormat": "__auto",
+          "legendFormat": "가동 시간 (초)",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Uptime (가동 시간)",
+      "title": "Uptime (총 가동 시간)",
       "type": "stat"
     },
     {
@@ -170,7 +166,7 @@
             "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "opacity",
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -275,7 +271,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -309,7 +305,8 @@
                 "value": 0
               }
             ]
-          }
+          },
+          "unit": "s"
         },
         "overrides": []
       },
@@ -341,13 +338,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(n8n_workflow_execution_count_total[5m])",
-          "legendFormat": "{{status}}",
+          "expr": "rate(n8n_workflow_execution_count_total{status!=\"waiting\"}[5m])",
+          "legendFormat": "status: {{status}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Workflow Throughput (실행 속도/초)",
+      "title": "Workflow Throughput (실행 완료/실패 속도)",
       "type": "timeseries"
     },
     {
@@ -475,7 +472,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -542,34 +539,101 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(n8n_process_cpu_user_seconds_total[1m])",
-          "legendFormat": "User CPU",
+          "expr": "rate(n8n_process_cpu_seconds_total[1m]) * 100",
+          "legendFormat": "Total CPU (%)",
           "range": true,
           "refId": "A"
+        }
+      ],
+      "title": "Total CPU Usage (총 CPU 사용률 - 1m Rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "text": "정상 (0)"
+                },
+                "null": {
+                  "color": "red",
+                  "text": "연결 오류"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(n8n_process_cpu_system_seconds_total[1m])",
-          "legendFormat": "System CPU",
+          "expr": "n8n_scaling_mode_queue_jobs_waiting",
+          "legendFormat": "대기열 길이",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         }
       ],
-      "title": "CPU Usage (CPU 사용률 - 1m rate)",
-      "type": "timeseries"
+      "title": "Queue Depth (Redis 큐 대기 작업 수)",
+      "type": "stat"
     }
   ],
   "preload": false,
   "refresh": "5s",
   "schemaVersion": 42,
-  "tags": [
-    "n8n",
-    "monitor"
-  ],
+  "tags": ["n8n", "monitor"],
   "templating": {
     "list": [
       {

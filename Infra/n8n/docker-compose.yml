@@ -3,14 +3,17 @@ services:
     image: n8nio/n8n:latest
     container_name: n8n
     restart: unless-stopped    
-    # ports:
-    #   - ${N8N_HOST_PORT}:${N8N_PORT}
+    ports:
+      - ${N8N_HOST_PORT}:${N8N_PORT}
     expose:
       - ${N8N_PORT}
+    secrets:
+      - redis_password    
     environment:
       - GENERIC_TIMEZONE=${DEFAULT_TIMEZONE:-Asia/Seoul}
       - TZ=${DEFAULT_TIMEZONE:-Asia/Seoul}      
       # 1. 기본 설정
+      - N8N_PROXY_HOPS=1
       # [중요] Traefik 도메인 설정 반영
       - N8N_PROTOCOL=https
       - N8N_HOST=n8n.${DEFAULT_URL}      
@@ -32,15 +35,22 @@ services:
       - DB_POSTGRESDB_SSL_ENABLED=true
       - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
       # 4. 실행 모드 (자체 실행)
-      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_MODE=queue
       # --- [모니터링 설정 추가] ---
       - N8N_METRICS=true      
       - N8N_METRICS_PREFIX=n8n_  # 메트릭 이름 앞에 붙을 접두사 (관리하기 편함)
       - N8N_METRICS_INCLUDE_WORKFLOW_ID_LABEL=true # 어떤 워크플로우가 부하를 주는지 식별 가능
       - N8N_METRICS_INCLUDE_NODE_TYPE_LABEL=true   # 어떤 노드(HTTP, Cron 등)가 많이 쓰이는지 확인
+      - N8N_METRICS_INCLUDE_QUEUE_METRICS=true
+      # --- Queue mode / Redis 연결 ---
+      - QUEUE_BULL_REDIS_HOST=n8n-redis    # 같은 docker 네트워크 이름
+      - QUEUE_BULL_REDIS_PORT=6379
+      - QUEUE_BULL_PREFIX=n8n              # Redis key prefix (선택)
+      - QUEUE_BULL_REDIS_PASSWORD_FILE=/run/secrets/redis_password
+      - QUEUE_HEALTH_CHECK_ACTIVE=true     # Redis 연결 상태 내부 헬스체크 활성화
+      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true  # 수동 실행도 워커로 보내기 (선택)
     labels:
-      - "traefik.enable=true"
-      
+      - "traefik.enable=true"      
       # n8n UI & Webhook 라우터 (https://n8n.hy-home.local)
       - "traefik.http.routers.n8n.rule=Host(`n8n.${DEFAULT_URL}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
@@ -60,6 +70,49 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+  n8n-worker:
+    image: n8nio/n8n:latest
+    container_name: n8n-worker
+    restart: unless-stopped
+    depends_on:
+      - n8n-redis
+      - pg-router
+    environment:
+      # 타임존
+      - GENERIC_TIMEZONE=${DEFAULT_TIMEZONE:-Asia/Seoul}
+      - TZ=${DEFAULT_TIMEZONE:-Asia/Seoul}
+
+      # 실행 모드 & Redis 큐 설정 (main과 동일하게)
+      - EXECUTIONS_MODE=queue
+      - QUEUE_BULL_REDIS_HOST=n8n-redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - QUEUE_BULL_PREFIX=n8n
+      - QUEUE_BULL_REDIS_PASSWORD_FILE=/run/secrets/redis_password
+
+      # DB 설정 (main과 동일)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOSTNAME}
+      - DB_POSTGRESDB_PORT=${POSTGRES_WRITE_PORT}
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      - DB_POSTGRESDB_SSL_ENABLED=true
+      - DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+
+      # 암호화 키 (main과 동일해야 함)
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    secrets:
+      - redis_password
+    networks:
+      infra_net:
+        ipv4_address: 172.19.0.17   # 여유 IP 하나
+    command: worker
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
   n8n-redis:
     image: redis:8.2.3-bookworm # Redis 8.2.x
     container_name: n8n-redis
@@ -68,11 +121,7 @@ services:
     networks:
       infra_net:
         ipv4_address: 172.19.0.15
-    restart: unless-stopped    
-    environment:
-      - QUEUE_BULL_REDIS_HOST=n8n-redis
-      - QUEUE_BULL_REDIS_PORT=6379
-      - QUEUE_BULL_REDIS_PASSWORD_FILE=/run/secrets/redis_password
+    restart: unless-stopped          
     volumes:
       # 공통 redis.conf
       - n8n-redis-data:/data

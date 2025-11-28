@@ -75,6 +75,7 @@ services:
       - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
       - "traefik.http.routers.oauth2-proxy.tls=true"
       - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=${OAUTH2_PROXY_PORT}"
+      
     networks:
       - infra_net
     logging: 

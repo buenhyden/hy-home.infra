@@ -208,7 +208,6 @@ services:
       - "traefik.http.routers.haproxy-stats.rule=Host(`pg-haproxy.${DEFAULT_URL}`)"
       - "traefik.http.routers.haproxy-stats.entrypoints=websecure"
       - "traefik.http.routers.haproxy-stats.tls=true"
-      - "traefik.http.services.haproxy-stats.loadbalancer.server.port=${REDIS_INSIGHT_PORT}"
       # [중요] HAProxy 설정 파일(haproxy.cfg)에 정의된 Stats 포트(보통 8404)와 일치해야 함
       - "traefik.http.services.haproxy-stats.loadbalancer.server.port=${HAPROXY_PORT}"
     depends_on:

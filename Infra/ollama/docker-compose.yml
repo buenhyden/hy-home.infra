@@ -4,8 +4,17 @@ services:
     container_name: ollama
     # ports:
     #   - "${OLLAMA_HOST_PORT}:${OLLAMA_PORT}"    
+    expose:
+      - ${OLLAMA_PORT}
     volumes:
       - ollama-data:/root/.ollama
+    environment:
+      # [필수 추가] Ollama가 모든 네트워크 인터페이스(Docker 내부)에서 수신하도록 설정
+      # 기본 포트가 11434라면 ${OLLAMA_PORT}는 11434와 일치해야 합니다.
+      - OLLAMA_HOST=0.0.0.0:${OLLAMA_PORT}
+      
+      # [GPU 필수] 컨테이너가 할당된 GPU를 사용하도록 명시
+      - NVIDIA_VISIBLE_DEVICES=all
     networks:
       infra_net:
         ipv4_address: 172.19.0.40
@@ -102,7 +111,7 @@ services:
     image: lucabecker42/ollama-exporter:latest
     container_name: ollama-exporter
     environment:
-      - OLLAMA_HOST=host.docker.internal:${OLLAMA_PORT}
+      - OLLAMA_HOST=ollama:${OLLAMA_PORT}
     ports:
       - "${OLLAMA_EXPORTER_HOST_PORT}:${OLLAMA_EXPORTER_PORT}"   # /metrics
     restart: unless-stopped
@@ -114,5 +123,3 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
-
-
