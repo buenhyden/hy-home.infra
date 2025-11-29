@@ -108,3 +108,16 @@ scrape_configs:
     scheme: http
     static_configs:      
       - targets: ['keycloak:9000']
+
+  - job_name: 'airflow'
+    static_configs:
+      - targets: ['airflow-statsd-exporter:9102']
+        
+  - job_name: 'couchdb'
+    metrics_path: /_node/_local/_prometheus
+    static_configs:
+      - targets: ['couchdb:5984']
+    # CouchDB는 메트릭 접근 시에도 인증이 필요합니다.
+    basic_auth:
+      username: 'admin' # .env의 COUCHDB_USER
+      password: 'uZFst8vzfwxsbTz' # .env의 COUCHDB_PASSWORD

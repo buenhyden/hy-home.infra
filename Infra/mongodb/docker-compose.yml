@@ -1,20 +1,38 @@
 services:
+  mongo-key-generator:
+    image: alpine:latest
+    container_name: mongo-key-generator
+    restart: "no" # 한 번 실행하고 종료됨
+    volumes:
+      - mongo-key:/data/configdb # 여기는 RW(읽기/쓰기)로 마운트
+    command: >
+      /bin/sh -c "
+        if [ ! -f /data/configdb/mongodb.key ]; then
+          echo 'Generating MongoDB KeyFile...';
+          apk add --no-cache openssl;
+          openssl rand -base64 756 > /data/configdb/mongodb.key;
+        else
+          echo 'KeyFile already exists.';
+        fi;
+        
+        # [핵심] 권한 강제 설정 (MongoDB 유저 ID: 999)
+        echo 'Setting permissions...';
+        chown 999:999 /data/configdb/mongodb.key;
+        chmod 400 /data/configdb/mongodb.key;
+        ls -l /data/configdb/mongodb.key;
+      "
   mongodb-rep1:
     image: mongo:latest
     restart: unless-stopped
     container_name: mongodb-rep1
-    hostname: mongodb-rep1
-    expose:
-      - ${MONGODB_PORT}
-    ports:
-      - ${MONGODB_HOST_REPLICASET_1_PORT}:${MONGODB_PORT}
+    hostname: mongodb-rep1    
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${NOSQL_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
     # 볼륨 설정
-    volumes:
-      - replicaset-1-mongo-conf-volume:/data/configdb
-      - replicaset-1-mongo-data-volume:/data/db:rw
+    volumes:      
+      - mongodb1-data:/data/db:rw
+      - mongo-key:/data/configdb:ro
     command:
       - "--replSet"
       - "MyReplicaSet"
@@ -28,23 +46,22 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - nt-databases    
+      - infra_net
+    depends_on:
+      - mongo-key-generator
+
   mongodb-rep2:
     image: mongo:latest
     restart: unless-stopped
     container_name: mongodb-rep2
-    hostname: mongodb-rep2
-    expose:
-      - ${MONGODB_PORT}
-    ports:
-      - ${MONGODB_HOST_REPLICASET_2_PORT}:${MONGODB_PORT}
+    hostname: mongodb-rep2    
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${NOSQL_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
     # 볼륨 설정
-    volumes:
-      - replicaset-2-mongo-conf-volume:/data/configdb
-      - replicaset-2-mongo-data-volume:/data/db:rw
+    volumes:      
+      - mongodb2-data:/data/db:rw
+      - mongo-key:/data/configdb:ro
     command:
       - "--replSet"
       - "MyReplicaSet"
@@ -58,7 +75,66 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - nt-databases    
+      - infra_net    
+    depends_on:
+      - mongo-key-generator
+  
+  # [추가] MongoDB Arbiter (투표권만 가진 가벼운 노드, 데이터 저장 안 함)
+  mongodb-arbiter:
+    image: mongo:latest
+    container_name: mongodb-arbiter
+    hostname: mongodb-arbiter
+    restart: unless-stopped
+    # Arbiter는 계정 생성이 필요 없음 (KeyFile로만 인증)
+    volumes:
+      - mongo-key:/data/configdb:ro
+    command:
+      - "--replSet"
+      - "MyReplicaSet"
+      - "--keyFile"
+      - "/data/configdb/mongodb.key"
+      - "--bind_ip_all"
+    networks:
+      - infra_net
+    depends_on:
+      - mongo-key-generator
+  # [추가] Replica Set 초기화 (한 번만 실행되고 죽음)
+  mongo-init:
+    image: mongo:latest
+    container_name: mongo-init
+    restart: "no"
+    networks:
+      - infra_net
+    depends_on:
+      mongodb-rep1:
+        condition: service_healthy
+      mongodb-rep2:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo 'Waiting for servers to be ready...';
+        sleep 5;
+        mongosh --host mongodb-rep1 -u ${MONGODB_ROOT_USERNAME} -p ${MONGODB_ROOT_PASSWORD} --eval '
+          try {
+            rs.status();
+            print(\"Replica set already initialized\");
+          } catch (e) {
+            print(\"Initializing replica set...\");
+            rs.initiate({
+              _id: \"MyReplicaSet\",
+              members: [
+                { _id: 0, host: \"mongodb-rep1:27017\", priority: 2 },
+                { _id: 1, host: \"mongodb-rep2:27017\", priority: 1 },
+                { _id: 2, host: \"mongodb-arbiter:27017\", arbiterOnly: true }
+              ]
+            });
+          }
+        '
+      "
+
+  # ============================================================================
+  # Mongo Express (Admin UI)
+  # ============================================================================
   mongo-express:
     image: mongo-express:latest
     container_name: mongo-express
@@ -67,67 +143,43 @@ services:
     environment:
       ME_CONFIG_MONGODB_ENABLE_ADMIN: true
       ME_CONFIG_MONGODB_AUTH_DATABASE: admin
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${NOSQL_ROOT_USER}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${NOSQL_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep1:${MONGODB_PORT}?replicaSet=MyReplicaSet,${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep2:${MONGODB_PORT}?replicaSet=MyReplicaSet
-      ME_CONFIG_MONGODB_SERVER: mongodb-rep1,mongodb-rep2
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGODB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGODB_ROOT_PASSWORD}
+      
+      ME_CONFIG_MONGODB_SERVER: mongodb-rep1,mongodb-rep2,mongodb-arbiter
+      ME_CONFIG_MONGODB_REPLICA_SET: MyReplicaSet
       ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_CONFIG_BASICAUTH_USERNAME}
       ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_CONFIG_BASICAUTH_PASSWORD}
     expose:
       - ${MONGO_EXPRESS_PORT}
     labels:
-      - traefik.enable=true
-      - traefik.docker.network=nt-local
-      - traefik.http.services.mongo-express.loadbalancer.server.port=${MONGO_EXPRESS_PORT}
-      - traefik.http.routers.mongo-express.rule=Host(`mongo-express.${DEFAULT_URL}`)
-      - traefik.http.routers.mongo-express.entrypoints=web
-      # For https:
-      - traefik.http.routers.mongo-express-secure.rule=Host(`mongo-express.${DEFAULT_URL}`)
-      - traefik.http.routers.mongo-express-secure.entrypoints=websecure
-      - traefik.http.middlewares.web-redirect-websecure.redirectscheme.scheme=https
-      - traefik.http.routers.mongo-express.middlewares=web-redirect-websecure
+      - "traefik.enable=true"      
+      # mongo-express 라우터
+      # 도메인: mongo-express.pg.hy-home.local
+      - "traefik.http.routers.mongo-express.rule=Host(`mongo-express.${DEFAULT_URL}`)"
+      - "traefik.http.routers.mongo-express.entrypoints=websecure"
+      - "traefik.http.routers.mongo-express.tls=true"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=${MONGO_EXPRESS_PORT}"
     networks:
-      - nt-databases
+      - infra_net
     depends_on:
-      - mongodb-rep1
-      - mongodb-rep2    
-
+      - mongo-init
+  # ============================================================================
+  # MongoDB Exporter (Prometheus)
+  # ============================================================================
   mongodb-exporter:
-    image: percona/mongodb_exporter:0.40.0
+    image: percona/mongodb_exporter:0.40
     container_name: mongodb-exporter
     expose:
       - ${MONGO_EXPORTER_PORT}
     command:
-      - "--mongodb.uri=mongodb://${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep1:${MONGODB_PORT}?replicaSet=MyReplicaSet,${NOSQL_ROOT_USER}:${NOSQL_ROOT_PASSWORD}@mongodb-rep2:${MONGODB_PORT}?replicaSet=MyReplicaSet"
-    # command: /bin/mysqld_exporter collect.binlog_size=true collect.info_schema.processlist=true
+      # [수정] 변수명 통일 (NOSQL_ROOT_USER -> MONGODB_ROOT_USERNAME) 및 Connection String 정리
+      - "--mongodb.uri=mongodb://${MONGODB_ROOT_USERNAME}:${MONGODB_ROOT_PASSWORD}@mongodb-rep1:27017,mongodb-rep2:27017/?replicaSet=MyReplicaSet&authSource=admin"
+      # (선택) 컬렉션 수집 활성화
+      - "--collect.collection" 
+      - "--collect.database"
+      - "--collect.indexusage"
     depends_on:
-      - mongodb-rep1
-      - mongodb-rep2
+      - mongo-init
     networks:
-      - nt-databases    
-
-volumes:
-  replicaset-1-mongo-conf-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-1/configdb
-  replicaset-1-mongo-data-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-1/db
-  replicaset-2-mongo-conf-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-2/configdb
-  replicaset-2-mongo-data-volume:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${DEFAULT_DATABASE_DIR}/mongo/replicaset-2/db
+      - infra_net

@@ -38,15 +38,32 @@ include:
   - traefik/docker-compose.yml
   # - nginx/docker-compose.yml
   - oauth2-proxy/docker-compose.yml
-  - keycloak/docker-compose.yml
+  - keycloak/docker-compose.yml  
+  - airflow/docker-compose.yml 
+  - couchdb/docker-compose.yml
+  # - arangodb/docker-compose.yml
+  # - mongodb/docker-compose.yml
   # - locust/docker-compose.yml
-  # - wikijs/docker-compose.yml
-  # - airflow/docker-compose.yml
-  # - loki/docker-compose.yml
-  # - tempo/docker-compose.yml
+  # - wikijs/docker-compose.yml 
   #- elasticsearch/docker-compose.yml
 
 volumes:
+  couchdb1-data:
+  couchdb2-data:
+  couchdb3-data:
+  mongo-key:  # <--- [추가] 외부에서 생성한 볼륨임    
+  mongodb1-data:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_MONGODB_DIR}/mongodb/rep1
+  mongodb2-data:
+  #   driver: local
+  #   driver_opts:
+  #     o: bind
+  #     type: none
+  #     device: ${DEFAULT_MONGODB_DIR}/mongodb/rep2
   qdrant-data: 
   #   driver: local
   #   driver_opts:
@@ -234,11 +251,11 @@ volumes:
     #   type: none
     #   device: ${DEFAULT_KAFKA_DATA_DIR}/kafka-connect
   airflow-dags:
-    # driver: local
-    # driver_opts:
-    #   o: bind
-    #   type: none
-    #   device: ${DEFAULT_AIRFLOW_DIR}/dags
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/dags
   airflow-logs:
     # driver: local
     # driver_opts:
@@ -252,11 +269,11 @@ volumes:
     #   type: none
     #   device: ${DEFAULT_AIRFLOW_DIR}/config
   airflow-plugins:
-    # driver: local
-    # driver_opts:
-    #   o: bind
-    #   type: none
-    #   device: ${DEFAULT_AIRFLOW_DIR}/plugins
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${DEFAULT_AIRFLOW_DIR}/plugins
   etcd1-data:
     # driver: local
     # driver_opts:

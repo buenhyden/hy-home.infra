@@ -9,8 +9,8 @@ x-airflow-common: &airflow-common
   environment: &airflow-common-env    
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/airflow"
-    AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOSTNAME}/airflow"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${POSTGRES_HOSTNAME}:${POSTGRES_WRITE_PORT}/airflow"
+    AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${POSTGRES_HOSTNAME}:${POSTGRES_WRITE_PORT}/airflow"
     AIRFLOW__CELERY__BROKER_URL: "redis://:${REDIS_PASSWORD}@${REDIS_NODE_NAME}:${REDIS_PORT}/0"
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
@@ -24,10 +24,17 @@ x-airflow-common: &airflow-common
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: "/opt/airflow/config/airflow.cfg"
+    # 1. X-Forwarded-* 헤더를 신뢰하여 HTTPS 인식
+    AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "true"
+    # 2. 외부 접속 도메인 명시 (CSRF 문제 방지)
+    AIRFLOW__WEBSERVER__BASE_URL: "https://airflow.${DEFAULT_URL}"
+    # StatsD 메트릭 활성화
+    AIRFLOW__METRICS__STATSD_ON: "true"
+    AIRFLOW__METRICS__STATSD_HOST: "airflow-statsd-exporter" # 위에서 만든 컨테이너 이름
+    AIRFLOW__METRICS__STATSD_PORT: "${STATSD_AIRFLOW_PORT}"
+    AIRFLOW__METRICS__STATSD_PREFIX: "airflow" # 메트릭 접두사
   volumes:
     - airflow-dags:/opt/airflow/dags
-    - airflow-logs:/opt/airflow/logs
-    - airflow-config:/opt/airflow/config
     - airflow-plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   logging:
@@ -40,8 +47,8 @@ services:
   airflow-apiserver:
     <<: *airflow-common
     command: api-server
-    ports:
-      - "${AIRFLOW_HOST_PORT}:${AIRFLOW_PORT}"
+    # ports:
+    #   - "${AIRFLOW_HOST_PORT}:${AIRFLOW_PORT}"
     healthcheck:
       test:
         [
@@ -58,6 +65,16 @@ services:
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+    labels:
+      - "traefik.enable=true"
+      # 도메인: airflow.hy-home.local
+      - "traefik.http.routers.airflow.rule=Host(`airflow.${DEFAULT_URL}`)"
+      - "traefik.http.routers.airflow.entrypoints=websecure"
+      - "traefik.http.routers.airflow.tls=true"
+      - "traefik.http.services.airflow.loadbalancer.server.port=${AIRFLOW_PORT}" # Airflow UI 기본 포트
+      
+      # (선택 사항) Keycloak SSO를 적용하려면 아래 주석 해제
+      # - "traefik.http.routers.airflow.middlewares=sso-auth@file"
 
   airflow-scheduler:
     <<: *airflow-common
@@ -250,10 +267,10 @@ services:
     command: celery flower
     profiles:
       - flower
-    ports:
-      - "${FLOWER_HOST_PORT}:${FLOWER_PORT}"
+    # ports:
+    #   - "${FLOWER_HOST_PORT}:${FLOWER_PORT}"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      test: ["CMD", "curl", "--fail", "http://localhost:${FLOWER_PORT}/"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -262,3 +279,26 @@ services:
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+    labels:
+      - "traefik.enable=true"
+      # 도메인: flower.hy-home.local
+      - "traefik.http.routers.flower.rule=Host(`flower.${DEFAULT_URL}`)"
+      - "traefik.http.routers.flower.entrypoints=websecure"
+      - "traefik.http.routers.flower.tls=true"
+      - "traefik.http.services.flower.loadbalancer.server.port=${FLOWER_PORT}"
+      
+      # [보안 권장] Flower는 기본 로그인 보안이 취약하므로 SSO 미들웨어를 붙이는 것이 좋습니다.
+      - "traefik.http.routers.flower.middlewares=sso-auth@file"
+  airflow-statsd-exporter:
+    image: prom/statsd-exporter:v0.28.0
+    container_name: airflow-statsd-exporter
+    restart: unless-stopped
+    command: "--statsd.listen-udp=:${STATSD_AIRFLOW_PORT} --web.listen-address=:${STATSD_PROMETHEUS_PORT} --statsd.mapping-config=/tmp/mappings.yml"
+    volumes:
+      # 매핑 파일 (아래 3번 단계에서 생성)
+      - ./statsd_mapping.yml:/tmp/mappings.yml:ro
+    networks:
+      - infra_net
+    expose:
+      - "${STATSD_PROMETHEUS_PORT}" # Prometheus가 긁어갈 포트
+      - "${STATSD_AIRFLOW_PORT}" # Airflow가 보낼 포트

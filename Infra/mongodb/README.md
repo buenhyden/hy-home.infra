@@ -44,3 +44,32 @@ docker-compose up -d
 
 - `replicaset-*-mongo-data-volume`: 데이터베이스 데이터의 영구 저장소.
 - `replicaset-*-mongo-conf-volume`: 설정 파일 저장소.
+
+윈도우(Windows) 환경, 특히 Docker Desktop을 사용할 때 **"파일 권한(Permission)"** 문제는 가장 큰 골칫덩어리입니다.
+
+MongoDB는 KeyFile의 권한이 \*\*반드시 400(읽기 전용)\*\*이어야 하고, 소유자가 \*\*999(mongodb 계정)\*\*여야만 실행됩니다. 하지만 윈도우(NTFS)에서 생성한 파일을 컨테이너로 마운트(Bind Mount)하면, **권한이 777(모두 허용)로 고정되어 MongoDB가 "보안상 위험하다"며 실행을 거부**합니다.
+
+따라서 윈도우에서는 로컬 파일을 직접 마운트하지 말고, **"도커 볼륨(Docker Volume)"을 생성해서 그 안에 키 파일을 밀어넣는 방식**을 써야 100% 성공합니다.
+
+다음 단계를 그대로 따라 하세요. (PowerShell 기준)
+
+-----
+
+### 1단계: KeyFile 저장용 도커 볼륨 생성
+
+로컬 폴더 대신 도커가 관리하는 볼륨을 만듭니다. 이 공간은 리눅스 파일 시스템이므로 권한 제어가 완벽합니다.
+
+```powershell
+# 1. 도커 볼륨 생성
+docker volume create mongo-key
+```
+
+### 2단계: 임시 컨테이너를 이용해 Key 생성 및 권한 설정
+
+이 명령어는 `mongo-key` 볼륨에 `mongodb.key`를 생성하고, 권한(400)과 소유자(999:999)를 알맞게 설정한 뒤 종료되는 **1회성 명령어**입니다. (PowerShell에 복사해서 실행하세요.)
+
+```powershell
+docker run --rm -v mongo-key:/data/configdb alpine sh -c "apk add --no-cache openssl && openssl rand -base64 756 > /data/configdb/mongodb.key && chmod 400 /data/configdb/mongodb.key && chown 999:999 /data/configdb/mongodb.key && ls -l /data/configdb/mongodb.key"
+```
+
+- **실행 결과:** 마지막에 `-r-------- ... 999 999 ... mongodb.key` 같은 로그가 나오면 성공입니다.
