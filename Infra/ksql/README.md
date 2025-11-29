@@ -1,30 +1,39 @@
 # ksqlDB
 
-## Overview
-This directory contains the Docker Compose configuration for running ksqlDB, a database purpose-built for stream processing applications.
+## 개요
 
-## Services
-- **ksqldb-node1**: The ksqlDB server node.
+이 디렉토리는 스트림 처리 애플리케이션을 위해 구축된 데이터베이스인 ksqlDB를 실행하기 위한 Docker Compose 구성을 포함합니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
-- Running Kafka cluster (ksqlDB depends on it).
+## 서비스
 
-## Configuration
-The service relies on the following environment variables (defined in `.env`):
-- `KSQLDB_HOST_PORT`: Host port for ksqlDB.
-- `KSQLDB_PORT`: Container port.
-- `KAFKA_PORT`: Kafka broker port.
+- **ksqldb-node1**: ksqlDB 서버 노드.
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+- 실행 중인 Kafka 클러스터 (ksqlDB가 의존함).
+
+## 설정
+
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
+
+- `KSQLDB_HOST_PORT`: ksqlDB 호스트 포트.
+- `KSQLDB_PORT`: 컨테이너 포트.
+- `KAFKA_PORT`: Kafka 브로커 포트.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-## Access
+## 접속
+
 - **ksqlDB Server**: `http://localhost:${KSQLDB_HOST_PORT}`
 
-## Volumes
-- `ksqldb-node-1-data-volume`: Persistent storage for ksqlDB.
+## 볼륨
+
+- `ksqldb-node-1-data-volume`: ksqlDB 데이터의 영구 저장소.

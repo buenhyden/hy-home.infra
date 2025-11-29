@@ -23,6 +23,9 @@ Docker/
 │   ├── minio/               # MinIO (S3 Compatible Storage)
 │   ├── mongodb/             # MongoDB
 │   ├── n8n/                 # n8n (Workflow Automation)
+│   ├── neo4j/               # Neo4j (Graph Database)
+│   ├── nginx/               # Nginx (Web Server & Reverse Proxy)
+│   ├── oauth2-proxy/        # OAuth2 Proxy (Authentication)
 │   ├── ollama/              # Ollama (LLM Inference)
 │   ├── opensearch/          # OpenSearch Cluster (Search Engine)
 │   ├── postgresql/          # PostgreSQL HA (Patroni + Etcd + HAProxy)
@@ -37,6 +40,7 @@ Docker/
 ## 🚀 주요 서비스 구성
 
 ### 1. 데이터베이스 & 메시지 큐
+
 - **PostgreSQL HA**: Patroni, Etcd, HAProxy를 이용한 고가용성 클러스터.
 - **Redis Cluster**: 3 Master + 3 Slave 구조의 Redis 클러스터.
 - **Kafka**: Zookeeper 없는 KRaft 모드 클러스터 + Schema Registry + Connect + UI.
@@ -44,28 +48,35 @@ Docker/
 - **MongoDB**: NoSQL 데이터베이스.
 
 ### 2. 검색 & AI
+
 - **OpenSearch**: 3노드 클러스터 + Dashboards.
 - **Ollama**: 로컬 LLM 실행 환경 (GPU 지원 설정 포함).
 - **Qdrant**: Vector Database (RAG 구현용).
 
 ### 3. 관측성 (Observability)
+
 - **Grafana Alloy**: 메트릭, 로그, 트레이스 수집 에이전트.
 - **Prometheus, Grafana, Loki, Tempo**: (일부는 k8s로 이동 중, Docker 내에도 구성 가능)
 
 ### 4. 도구 & 유틸리티
+
 - **n8n**: 워크플로우 자동화 툴.
 - **Harbor**: 프라이빗 컨테이너 레지스트리.
 - **SonarQube**: 코드 정적 분석.
 - **Traefik**: 도커 컨테이너 라우팅 및 로드밸런싱.
+- **Nginx**: 고성능 웹 서버 및 리버스 프록시.
+- **OAuth2 Proxy**: OAuth2 인증 통합을 위한 프록시.
 
 ## 🛠 사용법
 
 ### 전체 실행
+
 ```bash
 docker compose up -d
 ```
 
 ### 특정 서비스 그룹 실행
+
 `docker-compose.yml`의 `include` 기능을 활용하여 모듈화되어 있습니다.
 개별 폴더로 이동하여 실행하거나, 메인에서 필요한 서비스만 주석 해제하여 사용할 수 있습니다.
 
@@ -76,6 +87,7 @@ docker compose up -d
 ```
 
 ## ⚠️ 주의사항
+
 - **네트워크**: 모든 서비스는 `infra_net` (172.19.0.0/16) 네트워크를 공유하여 서로 통신합니다.
 - **볼륨**: 데이터는 로컬 볼륨 또는 바인드 마운트를 통해 영구 저장됩니다.
 - **리소스**: 전체 실행 시 많은 CPU/RAM이 필요하므로 필요한 서비스만 선별하여 실행하는 것을 권장합니다.

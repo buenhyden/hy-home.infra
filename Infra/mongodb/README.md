@@ -1,37 +1,46 @@
 # MongoDB
 
-## Overview
-This directory contains the Docker Compose configuration for running a MongoDB Replica Set. It includes Mongo Express for web-based administration and a MongoDB Exporter for Prometheus monitoring.
+## 개요
 
-## Services
-- **mongodb-rep1**: Primary/Secondary node of the replica set.
-- **mongodb-rep2**: Primary/Secondary node of the replica set.
-- **mongo-express**: Web-based MongoDB admin interface.
-- **mongodb-exporter**: Prometheus exporter for MongoDB metrics.
+이 디렉토리는 MongoDB 레플리카 셋을 실행하기 위한 Docker Compose 구성을 포함합니다. 웹 기반 관리를 위한 Mongo Express와 Prometheus 모니터링을 위한 MongoDB Exporter도 포함되어 있습니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
+## 서비스
 
-## Configuration
-The service relies on the following environment variables (defined in `.env`):
-- `NOSQL_ROOT_USER`: MongoDB root username.
-- `NOSQL_ROOT_PASSWORD`: MongoDB root password.
-- `MONGODB_HOST_REPLICASET_1_PORT`, `MONGODB_HOST_REPLICASET_2_PORT`: Host ports for the nodes.
-- `MONGO_EXPRESS_PORT`: Host port for Mongo Express.
-- `MONGO_EXPORTER_PORT`: Host port for the exporter.
-- `MONGO_EXPRESS_CONFIG_BASICAUTH_USERNAME`, `MONGO_EXPRESS_CONFIG_BASICAUTH_PASSWORD`: Basic auth for Mongo Express.
+- **mongodb-rep1**: 레플리카 셋의 첫 번째 노드 (Primary/Secondary).
+- **mongodb-rep2**: 레플리카 셋의 두 번째 노드 (Primary/Secondary).
+- **mongo-express**: 웹 기반 MongoDB 관리 인터페이스.
+- **mongodb-exporter**: MongoDB 메트릭을 위한 Prometheus Exporter.
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+
+## 설정
+
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
+
+- `NOSQL_ROOT_USER`: MongoDB 루트 사용자 이름.
+- `NOSQL_ROOT_PASSWORD`: MongoDB 루트 비밀번호.
+- `MONGODB_HOST_REPLICASET_1_PORT`, `MONGODB_HOST_REPLICASET_2_PORT`: 각 노드의 호스트 포트.
+- `MONGO_EXPRESS_PORT`: Mongo Express 호스트 포트.
+- `MONGO_EXPORTER_PORT`: Exporter 호스트 포트.
+- `MONGO_EXPRESS_CONFIG_BASICAUTH_USERNAME`, `MONGO_EXPRESS_CONFIG_BASICAUTH_PASSWORD`: Mongo Express 접속을 위한 Basic Auth 정보.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-## Access
-- **Mongo Express**: `http://localhost:${MONGO_EXPRESS_PORT}` (or via Traefik if configured)
-- **MongoDB**: Connect via `mongodb-rep1` or `mongodb-rep2` on their respective ports.
+## 접속
 
-## Volumes
-- `replicaset-*-mongo-data-volume`: Persistent storage for database data.
-- `replicaset-*-mongo-conf-volume`: Configuration storage.
+- **Mongo Express**: `https://mongo-express.${DEFAULT_URL}` (Traefik을 통해 접근) 또는 `http://localhost:${MONGO_EXPRESS_PORT}`
+- **MongoDB**: `mongodb-rep1` 또는 `mongodb-rep2` 포트를 통해 직접 연결 가능.
+
+## 볼륨
+
+- `replicaset-*-mongo-data-volume`: 데이터베이스 데이터의 영구 저장소.
+- `replicaset-*-mongo-conf-volume`: 설정 파일 저장소.

@@ -1,42 +1,51 @@
 # Supabase
 
-## Overview
-This directory contains the Docker Compose configuration for running a self-hosted Supabase stack. It includes all core services like Auth, Realtime, Storage, and the Studio dashboard.
+## 개요
 
-## Services
-- **studio**: Supabase Dashboard.
-- **kong**: API Gateway.
-- **auth**: Authentication service (GoTrue).
-- **rest**: PostgREST service.
-- **realtime**: Realtime server.
-- **storage**: Storage API.
-- **imgproxy**: Image transformation service.
-- **meta**: Postgres meta service.
-- **functions**: Edge Functions runtime.
-- **analytics**: Analytics service (Logflare).
-- **db**: PostgreSQL database (customized for Supabase).
-- **vector**: Vector log collector.
-- **supavisor**: Connection pooler.
+이 디렉토리는 자체 호스팅 Supabase 스택을 실행하기 위한 Docker Compose 구성을 포함합니다. Auth, Realtime, Storage, Studio 대시보드와 같은 모든 핵심 서비스를 포함합니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
+## 서비스
 
-## Configuration
-The service relies on a large number of environment variables (defined in `.env`), including:
-- **Keys**: `ANON_KEY`, `SERVICE_ROLE_KEY`, `JWT_SECRET`.
-- **Database**: `POSTGRES_PASSWORD`, `POSTGRES_DB`.
-- **Ports**: `KONG_HTTP_PORT`, `KONG_HTTPS_PORT`.
+- **studio**: Supabase 대시보드.
+- **kong**: API 게이트웨이.
+- **auth**: 인증 서비스 (GoTrue).
+- **rest**: PostgREST 서비스.
+- **realtime**: 리얼타임 서버.
+- **storage**: 스토리지 API.
+- **imgproxy**: 이미지 변환 서비스.
+- **meta**: Postgres 메타 서비스.
+- **functions**: 엣지 함수 런타임.
+- **analytics**: 분석 서비스 (Logflare).
+- **db**: PostgreSQL 데이터베이스 (Supabase용 커스텀).
+- **vector**: 벡터 로그 수집기.
+- **supavisor**: 연결 풀러.
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+
+## 설정
+
+이 서비스는 다음을 포함하여 `.env`에 정의된 다수의 환경 변수를 사용합니다:
+
+- **키**: `ANON_KEY`, `SERVICE_ROLE_KEY`, `JWT_SECRET`.
+- **데이터베이스**: `POSTGRES_PASSWORD`, `POSTGRES_DB`.
+- **포트**: `KONG_HTTP_PORT`, `KONG_HTTPS_PORT`.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-## Access
-- **Supabase Studio**: `http://localhost:3000` (default, check `docker-compose.yml` for mapped port if different).
+## 접속
+
+- **Supabase Studio**: `http://localhost:3000` (기본값, 변경된 경우 `docker-compose.yml` 확인).
 - **API Gateway**: `http://localhost:${KONG_HTTP_PORT}`
 
-## Volumes
-- Multiple volumes are used for persisting database, storage, and configuration data.
+## 볼륨
+
+- 데이터베이스, 스토리지, 설정 데이터의 영구 보존을 위해 다수의 볼륨이 사용됩니다.

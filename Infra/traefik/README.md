@@ -1,53 +1,60 @@
 # Traefik
 
-## Overview
+## 개요
 
-This directory contains the Docker Compose configuration for running Traefik, a modern HTTP reverse proxy and load balancer.
+이 디렉토리는 최신 HTTP 리버스 프록시 및 로드 밸런서인 Traefik을 실행하기 위한 Docker Compose 구성을 포함합니다.
 
-## Services
+## 서비스
 
-- **traefik**: The Traefik proxy.
+- **traefik**: Traefik 프록시.
 
-## Prerequisites
+## 필수 조건
 
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
 
-## Configuration
+## 설정
 
-The service relies on the following environment variables (defined in `.env`):
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
 
-- `TRAEFIK_PORT`: Port for the Traefik Dashboard.
-- `DEFAULT_WEB_SERVER_DIR`: Directory for configuration and certs.
+- `TRAEFIK_DASHBOARD_HOST_PORT`: Traefik 대시보드 포트.
+- `HTTP_HOST_PORT`, `HTTPS_HOST_PORT`: HTTP/HTTPS 진입 포트.
+- `TRAEFIK_METRICS_HOST_PORT`: 메트릭 포트.
 
-## Usage
+## 사용법
 
-To start the services:
+서비스 시작:
 
 ```bash
 docker-compose up -d
 ```
 
-## Access
+## 접속
 
-- **HTTP**: Port 80
-- **HTTPS**: Port 443
-- **Dashboard**: `http://localhost:${TRAEFIK_PORT}`
+- **HTTP**: 포트 80 (또는 설정된 `HTTP_HOST_PORT`)
+- **HTTPS**: 포트 443 (또는 설정된 `HTTPS_HOST_PORT`)
+- **Dashboard**: `https://dashboard.${DEFAULT_URL}` (Traefik 자체 라우팅) 또는 `http://localhost:${TRAEFIK_DASHBOARD_HOST_PORT}`
 
-## Volumes
+## 볼륨
 
-- `traefik-conf-volume`: Configuration files.
-- `traefik-certs-volume`: SSL certificates.
-- `traefik-log-volume`: Logs.
+- `./traefik.yml`: 설정 파일.
+- `./certs`: SSL 인증서.
+- `./dynamic`: 동적 설정 파일.
+
+## 인증서 생성 (mkcert)
+
+로컬 개발용 인증서 생성 예시:
 
 ```bash
 mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 ::1 *.localhost hy-home.local *.hy-home.local *.minio.hy-home.local
 ```
 
-mkcert에서 와일드카드는 1단계만 적용
+*참고: mkcert에서 와일드카드는 1단계만 적용됩니다.*
 
-# 도커를 이용한 해시 생성 (공통)
+## 해시 생성 (htpasswd)
 
-```
-$ docker run --rm httpd:alpine htpasswd -nb admin secure_password
+Basic Auth 미들웨어용 해시 생성:
+
+```bash
+docker run --rm httpd:alpine htpasswd -nb admin secure_password
 ```

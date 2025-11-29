@@ -1,33 +1,42 @@
 # Apache Cassandra
 
-## Overview
-This directory contains the Docker Compose configuration for running Apache Cassandra using the Bitnami image. It also includes a Cassandra Exporter for Prometheus monitoring.
+## 개요
 
-## Services
-- **cassandra-node1**: The Cassandra database node.
-- **cassandra-exporter**: Exports Cassandra metrics for Prometheus.
+이 디렉토리는 Bitnami 이미지를 사용하여 Apache Cassandra를 실행하기 위한 Docker Compose 구성을 포함합니다. Prometheus 모니터링을 위한 Cassandra Exporter도 포함되어 있습니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
+## 서비스
 
-## Configuration
-The service relies on the following environment variables (defined in `.env`):
-- `DEFAULT_USERNAME`: Cassandra user.
-- `CASSANDRA_PASSWORD`: Cassandra password.
-- `CASSANDRA_EXPORTER_PORT`: Port for the exporter.
-- `DEFAULT_DATABASE_DIR`: Base directory for persistent storage.
+- **cassandra-node1**: Cassandra 데이터베이스 노드.
+- **cassandra-exporter**: Prometheus를 위한 Cassandra 메트릭 추출기.
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+
+## 설정
+
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
+
+- `DEFAULT_USERNAME`: Cassandra 사용자.
+- `CASSANDRA_PASSWORD`: Cassandra 비밀번호.
+- `CASSANDRA_EXPORTER_PORT`: Exporter 포트.
+- `DEFAULT_DATABASE_DIR`: 영구 저장을 위한 기본 디렉토리.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-## Access
-- **Cassandra**: Accessible internally via `cassandra-node1` on port `9042` (default client port).
-- **Metrics**: Accessible via `cassandra-exporter` on port `${CASSANDRA_EXPORTER_PORT}`.
+## 접속
 
-## Volumes
-- `cassandra-node1-volume`: Persistent storage for Cassandra data.
-- `cassandra-exporter-volume`: Configuration for the exporter.
+- **Cassandra**: 내부적으로 `cassandra-node1`의 `9042` 포트(기본 클라이언트 포트)를 통해 접근 가능합니다. (호스트 포트 매핑은 주석 처리되어 있음)
+- **Metrics**: `cassandra-exporter`의 `${CASSANDRA_EXPORTER_PORT}` 포트를 통해 접근 가능합니다.
+
+## 볼륨
+
+- `cassandra-node1-volume`: Cassandra 데이터의 영구 저장소.
+- `cassandra-exporter-volume`: Exporter 설정 파일.

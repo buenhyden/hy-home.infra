@@ -1,33 +1,43 @@
 # InfluxDB
 
-## Overview
-This directory contains the Docker Compose configuration for running InfluxDB v2.7, a time series database.
+## 개요
 
-## Services
-- **influxdb**: The InfluxDB server.
+이 디렉토리는 시계열 데이터베이스인 InfluxDB v2.7을 실행하기 위한 Docker Compose 구성을 포함합니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
+## 서비스
 
-## Configuration
-The service relies on the following environment variables (defined in `.env`):
-- `INFLUXDB_HOST_PORT`: Host port for InfluxDB.
-- `INFLUXDB_PORT`: Container port (default 8086).
-- `INFLUXDB_DB_NAME`: Database name.
-- `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`: Admin credentials.
-- `INFLUXDB_ORG`: Organization name.
-- `INFLUXDB_BUCKET`: Default bucket name.
-- `INFLUXDB_API_TOKEN`: Admin API token.
+- **influxdb**: InfluxDB 서버.
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+
+## 설정
+
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
+
+- `INFLUXDB_HOST_PORT`: InfluxDB 호스트 포트 (주석 처리됨, Traefik 사용).
+- `INFLUXDB_PORT`: 컨테이너 포트 (기본값 8086).
+- `INFLUXDB_DB_NAME`: 데이터베이스 이름.
+- `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`: 관리자 자격 증명.
+- `INFLUXDB_ORG`: 조직 이름.
+- `INFLUXDB_BUCKET`: 기본 버킷 이름.
+- `INFLUXDB_API_TOKEN`: 관리자 API 토큰.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-## Access
-- **InfluxDB UI**: `http://localhost:${INFLUXDB_HOST_PORT}`
+## 접속
 
-## Volumes
-- `influxdb-data`: Persistent storage for InfluxDB data.
+- **InfluxDB UI**: `https://influxdb.${DEFAULT_URL}` (Traefik을 통해 접근)
+- **Localhost**: 포트 매핑을 활성화한 경우 `http://localhost:${INFLUXDB_HOST_PORT}`
+
+## 볼륨
+
+- `influxdb-data`: InfluxDB 데이터의 영구 저장소.

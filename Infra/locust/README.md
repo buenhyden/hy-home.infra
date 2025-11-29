@@ -1,32 +1,41 @@
 # Locust
 
-## Overview
-This directory contains the Docker Compose configuration for running Locust, an open-source load testing tool. It is configured with a master-worker architecture and integrates with InfluxDB for metrics storage.
+## 개요
 
-## Services
-- **locust-master**: The master node that manages the test.
-- **locust-worker**: Worker nodes that generate load (scaled to 2 replicas).
+이 디렉토리는 오픈 소스 부하 테스트 도구인 Locust를 실행하기 위한 Docker Compose 구성을 포함합니다. 마스터-워커 아키텍처로 구성되어 있으며, 메트릭 저장을 위해 InfluxDB와 통합됩니다.
 
-## Prerequisites
-- Docker and Docker Compose installed.
-- A `.env` file in the `Docker/Infra` root directory.
-- InfluxDB service running (for metrics).
+## 서비스
 
-## Configuration
-The service relies on the following environment variables (defined in `.env`):
-- `LOCUST_HOST_PORT`: Host port for the Locust web interface.
-- `INFLUXDB_PORT`, `INFLUXDB_ORG`, `INFLUXDB_BUCKET`, `INFLUXDB_API_TOKEN`: InfluxDB connection details.
+- **locust-master**: 테스트를 관리하는 마스터 노드.
+- **locust-worker**: 부하를 생성하는 워커 노드 (2개 레플리카로 확장됨).
 
-## Usage
-To start the services:
+## 필수 조건
+
+- Docker 및 Docker Compose 설치.
+- `Docker/Infra` 루트 디렉토리에 `.env` 파일.
+- InfluxDB 서비스 실행 필요 (메트릭용).
+
+## 설정
+
+이 서비스는 다음 환경 변수(`.env`에 정의됨)를 사용합니다:
+
+- `LOCUST_HOST_PORT`: Locust 웹 인터페이스 호스트 포트.
+- `INFLUXDB_PORT`, `INFLUXDB_ORG`, `INFLUXDB_BUCKET`, `INFLUXDB_API_TOKEN`: InfluxDB 연결 정보.
+
+## 사용법
+
+서비스 시작:
+
 ```bash
 docker-compose up -d
 ```
 
-To run a test, ensure your `locustfile.py` is in the mounted volume.
+테스트를 실행하려면 마운트된 볼륨에 `locustfile.py`가 있는지 확인하십시오.
 
-## Access
+## 접속
+
 - **Locust Web UI**: `http://localhost:${LOCUST_HOST_PORT}`
 
-## Volumes
-- `locust-data`: Mounts the directory containing `locustfile.py`.
+## 볼륨
+
+- `locust-data`: `locustfile.py`를 포함하는 디렉토리 마운트.
